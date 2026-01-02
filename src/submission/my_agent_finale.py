@@ -19,7 +19,7 @@ Training configuration:
 import numpy as np
 import torch
 import torch.nn as nn
-from src.agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent
 
 
 # =============================================================================
