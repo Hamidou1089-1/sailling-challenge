@@ -2,6 +2,8 @@ import numpy as np
 import sys
 import os
 
+import wind_scenarios
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .base_agent import BaseAgent
@@ -16,6 +18,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import gymnasium as gym
 from wind_scenarios.env_sailing import SailingEnv
+from wind_scenarios import get_wind_scenario
 
 from torch.optim.lr_scheduler import ExponentialLR
 
@@ -180,7 +183,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int],
 
 
 
-def collect_normalization_stats(env, n_episodes=500, save_path='normalization_stats.pkl'):
+def collect_normalization_stats(SailingEnv: SailingEnv=SailingEnv, n_episodes=500, save_path='normalization_stats.pkl', train_scenarios=['training_1', 'training_2', 'training_3']):
     """
     Collecte les statistiques (mean, std) des physics features.
     À exécuter UNE FOIS avant l'entraînement.
@@ -199,6 +202,8 @@ def collect_normalization_stats(env, n_episodes=500, save_path='normalization_st
     goal = (16, 31)
     
     for episode in range(n_episodes):
+        wind_scenarios = get_wind_scenario(np.random.choice(train_scenarios))
+        env = SailingEnv(**wind_scenarios)
         obs, _ = env.reset(seed=episode)
         
         for step in range(200):
@@ -467,7 +472,8 @@ class DQNTrainer:
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995,
                  gamma=0.99, buffer_capacity=100000, batch_size=64,
                  learning_starts=1000, target_update_freq=1000,
-                 gradient_clip=10.0, device='cpu', use_double_dqn=True):
+                 gradient_clip=10.0, device='cpu', use_double_dqn=True, 
+                 train_scenarios=['training_1', 'training_2', 'training_3' ], tensorboard_dir=None):
         
         self.env = env
         self.device = torch.device(device)
@@ -504,7 +510,13 @@ class DQNTrainer:
         self.episodes = 0
         self.prev_distance = None
 
-        self.use_double_dqn = use_double_dqn  
+        self.use_double_dqn = use_double_dqn 
+        self.train_scenarios = train_scenarios 
+
+        self.writer = None
+        if tensorboard_dir:
+            self.writer = SummaryWriter(tensorboard_dir)
+            print(f"📊 TensorBoard logging to: {tensorboard_dir}")
         
         print(f"Using Double DQN: {self.use_double_dqn}") 
     
@@ -637,9 +649,21 @@ class DQNTrainer:
         # Optimize
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), 10)
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.gradient_clip)
         self.optimizer.step()
         self.scheduler.step()
+
+        # Log loss à TensorBoard ← AJOUT
+        if self.writer and self.steps % 10 == 0:  # Log toutes les 10 steps
+            self.writer.add_scalar('Train/Loss', loss.item(), self.steps)
+            
+            # Log Q-values moyennes (optionnel mais utile)
+            with torch.no_grad():
+                mean_q = q_values.mean().item()
+                max_q = q_values.max().item()
+                self.writer.add_scalar('Train/MeanQValue', mean_q, self.steps)
+                self.writer.add_scalar('Train/MaxQValue', max_q, self.steps)
+        
         
         # Update target network
         if self.steps % self.target_update_freq == 0:
@@ -735,36 +759,65 @@ class DQNTrainer:
         best_eval_reward = -np.inf
         
         for episode in range(num_episodes):
+            scenario_name = np.random.choice(self.train_scenarios)
+            wind_scenarios = get_wind_scenario(scenario_name)
+            self.env = SailingEnv(**wind_scenarios)
             # Collect episode
             episode_reward = self.collect_episode()
+
+            if self.writer:
+                self.writer.add_scalar('Train/EpisodeReward', episode_reward, episode)
+                self.writer.add_scalar('Train/Epsilon', self.epsilon, episode)
+                self.writer.add_scalar('Train/LearningRate', 
+                                      self.scheduler.get_last_lr()[0], episode)
+                self.writer.add_scalar('Train/BufferSize', 
+                                      len(self.replay_buffer), episode)
+                self.writer.add_scalar('Train/Steps', self.steps, episode)
+
             
             # Log
             if verbose and episode % 10 == 0:
                 current_lr = self.scheduler.get_last_lr()[0]
                 print(f"Episode {episode}/{num_episodes} | "
                       f"Reward: {episode_reward:.2f} | "
-                      f"Epsilon: {self.epsilon:.3f} | "
-                      f"LR: {current_lr:.6f} | "
+                      f"Epsilon: {self.epsilon:.5f} | "
+                      f"LR: {current_lr:.10f} | "
                       f"Buffer: {len(self.replay_buffer)} | "
                       f"Steps: {self.steps}")
             
             # Eval
             if episode % eval_freq == 0 and episode > 0:
-                eval_reward, success_rate = self.evaluate(n_episodes=5)
+                eval_reward, success_rate = self.evaluate(n_episodes=20)
+
+                if self.writer:
+                    self.writer.add_scalar('Eval/Reward', eval_reward, episode)
+                    self.writer.add_scalar('Eval/SuccessRate', success_rate, episode)
+            
                 print(f"[EVAL] Episode {episode} | "
                       f"Eval Reward: {eval_reward:.2f} | "
                       f"Success Rate: {success_rate:.1%}")
                 
-                # Save best model
-                if eval_reward > best_eval_reward:
-                    best_eval_reward = eval_reward
-                    self.save_model('dqn_best_model.pth')
-                    print(f"✓ New best model saved! (Reward: {eval_reward:.2f})")
-            
-            # Save checkpoint
+                # # Save best model
+                # if eval_reward > best_eval_reward:
+                #     best_eval_reward = eval_reward
+                #     self.save_model('dqn_best_model.pth')
+                #     print(f"✓ New best model saved! (Reward: {eval_reward:.2f})")
             if episode % save_freq == 0 and episode > 0:
-                self.save_model(f'dqn_checkpoint_{episode}.pth')
-    
+                self.save_model(f'checkpoints/dqn/checkpoint_ep{episode}.pth')
+                print(f"💾 Checkpoint saved: episode {episode}")
+              
+            # # Save checkpoint
+            # if episode % save_freq == 0 and episode > 0:
+            #     self.save_model(f'dqn_checkpoint_{episode}.pth')
+        
+        final_path = 'checkpoints/dqn/final_model.pth'
+        self.save_model(final_path)
+        print(f"💾 Final model saved: {final_path}")
+        
+        # Close writer ← AJOUT
+        if self.writer:
+            self.writer.close()
+
     def save_model(self, path='dqn_model.pth'):
         """Sauvegarde le modèle."""
         torch.save(self.q_network.state_dict(), path)

@@ -8,6 +8,7 @@ import numpy as np
 from pathlib import Path
 import sys
 import os
+from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
@@ -19,7 +20,7 @@ from wind_scenarios.env_sailing import SailingEnv
 def parse_args():
     parser = argparse.ArgumentParser(description="Train DQN agent")
     parser.add_argument('--config', type=str, required=True)
-    parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'])
+    parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
     parser.add_argument('--collect-stats', action='store_true')
     parser.add_argument('--resume-from', type=str, default=None)
     return parser.parse_args()
@@ -44,11 +45,12 @@ def main():
     # Collect stats
     if args.collect_stats:
         print(f"\nCollecting normalization stats...")
-        env = SailingEnv(**get_wind_scenario(train_scenarios[0]))
+        #env = SailingEnv(**get_wind_scenario(train_scenarios[0]))
         collect_normalization_stats(
-            env, 
+            SailingEnv=SailingEnv, 
             n_episodes=config['normalization']['collect_n_episodes'],
-            save_path=str(stats_path)
+            save_path=str(stats_path),
+            train_scenarios=train_scenarios
         )
         print(f"Stats saved to {stats_path}")
         return
@@ -61,6 +63,11 @@ def main():
     
     # Create environment
     env = SailingEnv(**get_wind_scenario(train_scenarios[0]))
+    exp_name = config['logging']['experiment_name']
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    tb_dir = f"runs/dqn/{exp_name}_{timestamp}"
+    Path(tb_dir).mkdir(parents=True, exist_ok=True)
+    print(f"📊 TensorBoard dir: {tb_dir}")
     
     # Create trainer
     print("\nCreating DQN trainer...")
@@ -77,7 +84,9 @@ def main():
         batch_size=config['agent']['batch_size'],
         target_update_freq=config['agent']['target_update_freq'],
         use_double_dqn=config['agent'].get('use_double_dqn', True),  # ← AJOUT
-        device=args.device
+        device=args.device,
+        tensorboard_dir=tb_dir,
+        train_scenarios=train_scenarios
     )
     
     print(f"Network: {sum(p.numel() for p in trainer.q_network.parameters()):,} parameters")

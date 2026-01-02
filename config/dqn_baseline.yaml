@@ -3,11 +3,11 @@
 
 # Training parameters
 training:
-  num_episodes: 24000
+  num_episodes: 6000
   max_steps_per_episode: 200
-  eval_freq: 1000          # Evaluate every N episodes
-  save_freq: 1000        # Save checkpoint every N episodes
-  log_freq: 500            # Log to TensorBoard every N episodes
+  eval_freq: 200          # Evaluate every N episodes
+  save_freq: 200        # Save checkpoint every N episodes
+  log_freq: 10            # Log to TensorBoard every N episodes
   
   # Wind scenarios for training
   train_scenarios: ['training_1', 'training_2', 'training_3']
@@ -19,14 +19,14 @@ training:
 # Agent hyperparameters
 agent:
   # Learning rate
-  learning_rate: 0.003   # Conservative 3e-4
-  lr_decay: 0.9999        # Slow decay
-  min_lr: 0.00001         # Floor
+  learning_rate: 0.001   # Conservative 3e-4
+  lr_decay: 0.99998        # Slow decay
+  min_lr: 0.0003         # Floor
   
   # Exploration (epsilon-greedy)
   epsilon_start: 1.0
-  epsilon_end: 0.01       # Changed from 0.05 to 0.01 for more exploitation
-  epsilon_decay: 0.9995   # Linear decay over ~14k steps to reach 0.01
+  epsilon_end: 0.005       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.9998   # Linear decay over ~14k steps to reach 0.01
   
   # Discount factor
   gamma: 0.99
@@ -34,11 +34,11 @@ agent:
   # Experience replay
   buffer_capacity: 100000
   batch_size: 64
-  learning_starts: 1000   # Start learning after N steps
+  learning_starts: 200   # Start learning after N steps
   
   # Target network
   target_update_type: "hard"  # Options: "hard" or "soft"
-  target_update_freq: 1000    # For hard update (every N steps)
+  target_update_freq: 500    # For hard update (every N steps)
   tau: 0.005                  # For soft update (not used if hard)
   
   # Network architecture
@@ -53,7 +53,7 @@ environment:
 # Normalization stats
 normalization:
   stats_path: "data/normalization_stats.pkl"
-  collect_n_episodes: 3000    # Episodes to collect stats
+  collect_n_episodes: 1500    # Episodes to collect stats
 
 # Checkpointing
 checkpoint:

@@ -202,3 +202,99 @@ OVERALL
 - Success: 100.00% ± 0.00%
 - Reward: 50.78 ± 16.68
 - Steps: 74.9 ± 34.3
+
+
+
+
+# DQN + CNN + Average pooling
+
+
+configuration file (yaml)
+\# DQN Baseline Configuration
+\# Safe conservative settings for initial training
+
+\# Training parameters
+training:
+  num_episodes: 6000
+  max_steps_per_episode: 200
+  eval_freq: 200          # Evaluate every N episodes
+  save_freq: 200        # Save checkpoint every N episodes
+  log_freq: 10            # Log to TensorBoard every N episodes
+  
+  \# Wind scenarios for training
+  train_scenarios: ['training_1', 'training_2', 'training_3']
+  eval_scenarios: ['training_1', 'training_2', 'training_3']
+  
+  \# Reproducibility
+  seed: 42
+
+\# Agent hyperparameters
+agent:
+  \# Learning rate
+  learning_rate: 0.001   # Conservative 3e-4
+  lr_decay: 0.99998        # Slow decay
+  min_lr: 0.0003         # Floor
+  
+  \# Exploration (epsilon-greedy)
+  epsilon_start: 1.0
+  epsilon_end: 0.005       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.9998   # Linear decay over ~14k steps to reach 0.01
+  
+  \# Discount factor
+  gamma: 0.99
+  
+  \# Experience replay
+  buffer_capacity: 100000
+  batch_size: 64
+  learning_starts: 200   # Start learning after N steps
+  
+  \# Target network
+  target_update_type: "hard"  # Options: "hard" or "soft"
+  target_update_freq: 500    # For hard update (every N steps)
+  tau: 0.005                  # For soft update (not used if hard)
+  
+  \# Network architecture
+  use_double_dqn: true        # Enable Double DQN (recommended)
+  gradient_clip: 10.0         # Clip gradients
+  
+\# Environment
+environment:
+  goal: [16, 31]
+  grid_size: [32, 32]
+
+\# Normalization stats
+normalization:
+  stats_path: "data/normalization_stats.pkl"
+  collect_n_episodes: 1500    # Episodes to collect stats
+
+\# Checkpointing
+checkpoint:
+  save_dir: "checkpoints/dqn"
+  resume_from: null           # Path to checkpoint to resume from
+
+\# Logging
+logging:
+  tensorboard_dir: "runs/dqn"
+  experiment_name: "dqn_baseline"
+  log_gradients: false        # Log gradient histograms (expensive)
+
+
+resultat:
+
+
+sailling-challenge git:main*  196s
+(.venv) ❯ python3 wind_scenarios/evaluate_submission.py src/submission/my_agent_dqn_dqn_baseline.py --seeds 1 --num-seeds 150
+Loaded agent: MyAgentDQN
+
+Evaluating on 3 wind scenarios with 150 seeds
+Agent: MyAgentDQN
+Maximum steps per episode: 1000
+
+| WIND_SCENARIO    | SUCCESS RATE | MEAN REWARD       | MEAN STEPS |
+| ------------ | ------------ | ------------ | ------------ |
+| training_1   | Success: 100.00% | Reward: 60.98 ± 5.27 | Steps: 50.6 ± 8.9 |
+| training_2   | Success: 100.00% | Reward: 76.51 ± 1.20 | Steps: 27.7 ± 1.6 |
+| training_3   | Success: 100.00% | Reward: 61.85 ± 5.64 | Steps: 49.3 ± 10.0 |
+OVERALL      | Success: 100.00% ± 0.00%
+Reward: 66.45 ± 7.12
+Steps: 42.5 ± 10.5
