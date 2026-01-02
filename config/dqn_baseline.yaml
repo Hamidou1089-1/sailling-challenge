@@ -1,0 +1,67 @@
+# DQN Baseline Configuration
+# Safe conservative settings for initial training
+
+# Training parameters
+training:
+  num_episodes: 24000
+  max_steps_per_episode: 200
+  eval_freq: 1000          # Evaluate every N episodes
+  save_freq: 1000        # Save checkpoint every N episodes
+  log_freq: 500            # Log to TensorBoard every N episodes
+  
+  # Wind scenarios for training
+  train_scenarios: ['training_1', 'training_2', 'training_3']
+  eval_scenarios: ['training_1', 'training_2', 'training_3']
+  
+  # Reproducibility
+  seed: 42
+
+# Agent hyperparameters
+agent:
+  # Learning rate
+  learning_rate: 0.003   # Conservative 3e-4
+  lr_decay: 0.9999        # Slow decay
+  min_lr: 0.00001         # Floor
+  
+  # Exploration (epsilon-greedy)
+  epsilon_start: 1.0
+  epsilon_end: 0.01       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.9995   # Linear decay over ~14k steps to reach 0.01
+  
+  # Discount factor
+  gamma: 0.99
+  
+  # Experience replay
+  buffer_capacity: 100000
+  batch_size: 64
+  learning_starts: 1000   # Start learning after N steps
+  
+  # Target network
+  target_update_type: "hard"  # Options: "hard" or "soft"
+  target_update_freq: 1000    # For hard update (every N steps)
+  tau: 0.005                  # For soft update (not used if hard)
+  
+  # Network architecture
+  use_double_dqn: true        # Enable Double DQN (recommended)
+  gradient_clip: 10.0         # Clip gradients
+  
+# Environment
+environment:
+  goal: [16, 31]
+  grid_size: [32, 32]
+
+# Normalization stats
+normalization:
+  stats_path: "data/normalization_stats.pkl"
+  collect_n_episodes: 3000    # Episodes to collect stats
+
+# Checkpointing
+checkpoint:
+  save_dir: "checkpoints/dqn"
+  resume_from: null           # Path to checkpoint to resume from
+
+# Logging
+logging:
+  tensorboard_dir: "runs/dqn"
+  experiment_name: "dqn_baseline"
+  log_gradients: false        # Log gradient histograms (expensive)
