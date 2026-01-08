@@ -365,11 +365,11 @@ class ReplayBuffer:
         
         # Stockage séparé pour économiser la mémoire
         self.wind_fields = np.zeros((capacity, 32, 32, 2), dtype=np.float32)
-        self.physics = np.zeros((capacity, 15), dtype=np.float32)
+        self.physics = np.zeros((capacity, 12), dtype=np.float32)
         self.actions = np.zeros(capacity, dtype=np.int64)
         self.rewards = np.zeros(capacity, dtype=np.float32)
         self.next_wind_fields = np.zeros((capacity, 32, 32, 2), dtype=np.float32)
-        self.next_physics = np.zeros((capacity, 15), dtype=np.float32)
+        self.next_physics = np.zeros((capacity, 12), dtype=np.float32)
         self.dones = np.zeros(capacity, dtype=np.float32)
     
     def push(self, wind_field, physics, action, reward, next_wind_field, next_physics, done):
