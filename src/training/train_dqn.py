@@ -12,7 +12,7 @@ from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.agents.my_agent_DQN import DQNTrainer, collect_normalization_stats
+from src.agents.my_agent_DQN import DQNTrainer
 from src.utils.save_my_dqn import save_dqn_agent
 from wind_scenarios import get_wind_scenario
 from wind_scenarios.env_sailing import SailingEnv
@@ -39,26 +39,9 @@ def main():
     Path('src/submission').mkdir(parents=True, exist_ok=True)
     Path('data').mkdir(parents=True, exist_ok=True)
     
-    stats_path = Path(config['normalization']['stats_path'])
+    
     train_scenarios = config['training']['train_scenarios']
     
-    # Collect stats
-    if args.collect_stats:
-        print(f"\nCollecting normalization stats...")
-        #env = SailingEnv(**get_wind_scenario(train_scenarios[0]))
-        collect_normalization_stats(
-            SailingEnv=SailingEnv, 
-            n_episodes=config['normalization']['collect_n_episodes'],
-            save_path=str(stats_path),
-            train_scenarios=train_scenarios
-        )
-        print(f"Stats saved to {stats_path}")
-        return
-    
-    if not stats_path.exists():
-        raise FileNotFoundError(f"Stats not found at {stats_path}. Run with --collect-stats first.")
-    
-    print(f"Using stats: {stats_path}")
     print(f"Training scenarios: {train_scenarios}")
     
     # Create environment
@@ -73,7 +56,6 @@ def main():
     print("\nCreating DQN trainer...")
     trainer = DQNTrainer(
         env,
-        stats_path=str(stats_path),
         learning_rate=config['agent']['learning_rate'],
         lr_decay=config['agent'].get('lr_decay', 1.0),
         epsilon_start=config['agent']['epsilon_start'],
@@ -83,7 +65,7 @@ def main():
         buffer_capacity=config['agent']['buffer_capacity'],
         batch_size=config['agent']['batch_size'],
         target_update_freq=config['agent']['target_update_freq'],
-        use_double_dqn=config['agent'].get('use_double_dqn', True),  # ← AJOUT
+        use_double_dqn=config['agent'].get('use_double_dqn', True),  
         device=args.device,
         tensorboard_dir=tb_dir,
         train_scenarios=train_scenarios

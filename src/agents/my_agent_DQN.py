@@ -26,141 +26,74 @@ import pickle
 from wind_scenarios.sailing_physics import calculate_sailing_efficiency 
 
 
-# =============================================================================
-# COLLECTE DES STATISTIQUES DE NORMALISATION
-# =============================================================================
 
-
-
-
-def compute_physics_features_raw(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarray:
+def generate_curriculum_params(progress):
     """
-    Calcule les physics features SANS normalisation (pour collecte de stats).
+    Générateur d'environnement robuste pour généralisation.
     
-    Returns:
-        Array de 15 features brutes
+    Args:
+        progress (float): 0.0 (Début) -> 1.0 (Fin)
     """
-    x, y = obs[0], obs[1]
-    vx, vy = obs[2], obs[3]
-    wx, wy = obs[4], obs[5]
-    wind_field = obs[6:].reshape(32, 32, 2)
     
-    # Vecteurs
-    goal_vec = np.array(goal) - np.array([x, y])
-    velocity_vec = np.array([vx, vy])
-    wind_vec = np.array([wx, wy])
+    # --- 1. DIRECTION : Toujours Aléatoire 360° ---
+    # C'est CRUCIAL. L'agent doit comprendre que le vent peut venir de n'importe où,
+    # même à l'épisode 1. La facilité vient de la stabilité, pas de la direction.
+    theta = np.random.uniform(0, 2 * np.pi)
+    wind_dir = (np.cos(theta), np.sin(theta))
     
-    # Magnitudes
-    distance_to_goal = np.linalg.norm(goal_vec)
-    velocity_magnitude = np.linalg.norm(velocity_vec)
-    wind_magnitude = np.linalg.norm(wind_vec)
-    
-    # Angles
-    angle_to_goal = np.arctan2(goal_vec[1], goal_vec[0])
-    
-    # Directness (cosine similarity velocity-goal)
-    if velocity_magnitude > 0.1 and distance_to_goal > 0:
-        directness = np.dot(velocity_vec, goal_vec) / (velocity_magnitude * distance_to_goal)
+    # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
+    # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
+    # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
+    if np.random.random() < 0.3:
+        difficulty = 0.0  # Mode "Repos / Fondamentaux"
     else:
-        directness = 0.0
+        # La difficulté suit la progression. 
+        # On ajoute un petit bruit pour ne pas être trop linéaire.
+        difficulty = np.clip(progress + np.random.uniform(-0.5, 0.5), 0.0, 1.0)
+
+    # --- 3. PARAMÈTRES DU VENT ---
     
-    # Alignement vent-goal
-    if wind_magnitude > 0.1 and distance_to_goal > 0:
-        wind_goal_alignment = np.dot(wind_vec, goal_vec) / (wind_magnitude * distance_to_goal)
-    else:
-        wind_goal_alignment = 0.0
+    # Vitesse : 3.0 est la vitesse standard. 
+    # Plus c'est dur, plus on s'éloigne de cette norme (vent très faible ou tempête).
+    # difficulty 0 -> speed 3.0
+    # difficulty 1 -> speed entre 1.0 et 5.0
+    speed_noise = np.random.uniform(-2.0, 2.0) * difficulty
+    base_speed = 3.0 + speed_noise
     
-    # Angle relatif vitesse-vent
-    if velocity_magnitude > 0.1 and wind_magnitude > 0.1:
-        v_angle = np.arctan2(vy, vx)
-        w_angle = np.arctan2(wy, wx)
-        relative_wind_angle = v_angle - w_angle
-        relative_wind_angle = np.arctan2(np.sin(relative_wind_angle), np.cos(relative_wind_angle))
-    else:
-        relative_wind_angle = 0.0
-    
-    # Équations cinématiques (physique réelle simplifiée)
-    # Accélération due au vent (coefficient simplifié)
-    # Dans un vrai cas, utiliser calculate_sailing_efficiency
-    dt = 1.0
-    wind_efficiency = 0.4  # Coefficient moyen (devrait venir de sailing_physics)
-    ax = wind_efficiency * wx
-    ay = wind_efficiency * wy
-    
-    # Prédiction position
-    predicted_x = x + vx * dt + 0.5 * ax * dt**2
-    predicted_y = y + vy * dt + 0.5 * ay * dt**2
-    predicted_goal_vec = np.array(goal) - np.array([predicted_x, predicted_y])
-    predicted_distance = np.linalg.norm(predicted_goal_vec)
-    
-    # Amélioration prédite
-    predicted_improvement = distance_to_goal - predicted_distance
-    
-    # Wind ahead
-    goal_dir = goal_vec / (distance_to_goal + 1e-6)
-    wind_ahead_samples = []
-    for d in range(1, 4):
-        check_x = int(x + d * goal_dir[0])
-        check_y = int(y + d * goal_dir[1])
-        if 0 <= check_x < 32 and 0 <= check_y < 32:
-            wind_ahead_samples.append(wind_field[check_x, check_y])
-    
-    if wind_ahead_samples:
-        avg_wind_ahead = np.mean(wind_ahead_samples, axis=0)
-        wind_ahead_alignment = np.dot(avg_wind_ahead, goal_dir)
-        wind_ahead_magnitude = np.linalg.norm(avg_wind_ahead)
-    else:
-        wind_ahead_alignment = 0.0
-        wind_ahead_magnitude = 0.0
-    
-    # Wind asymmetry (gauche vs droite)
-    perp_dir_left = np.array([-goal_dir[1], goal_dir[0]])
-    perp_dir_right = np.array([goal_dir[1], -goal_dir[0]])
-    
-    wind_left_samples = []
-    wind_right_samples = []
-    for d in range(1, 3):
-        check_x = int(x + d * perp_dir_left[0])
-        check_y = int(y + d * perp_dir_left[1])
-        if 0 <= check_x < 32 and 0 <= check_y < 32:
-            wind_left_samples.append(wind_field[check_x, check_y])
+    wind_init_params = {
+        'base_speed': base_speed,
+        'base_direction': wind_dir,
         
-        check_x = int(x + d * perp_dir_right[0])
-        check_y = int(y + d * perp_dir_right[1])
-        if 0 <= check_x < 32 and 0 <= check_y < 32:
-            wind_right_samples.append(wind_field[check_x, check_y])
+        # Echelle : 128 (Large/Facile) -> 16 (Haché/Dur)
+        'pattern_scale': 128 - int(112 * difficulty), 
+        
+        # Force des turbulences
+        'pattern_strength': 0.1 + (0.6 * difficulty),
+        'strength_variation': 0.1 + (0.6 * difficulty),
+        'noise': 0.01 + (0.15 * difficulty)
+    }
     
-    if wind_left_samples and wind_right_samples:
-        avg_wind_left = np.mean(wind_left_samples, axis=0)
-        avg_wind_right = np.mean(wind_right_samples, axis=0)
-        wind_asymmetry = np.linalg.norm(avg_wind_left) - np.linalg.norm(avg_wind_right)
-    else:
-        wind_asymmetry = 0.0
+    # --- 4. EVOLUTION DYNAMIQUE ---
+    wind_evol_params = {
+        # Probabilité de changement : De 0% (Stable) à 90% (Chaos)
+        'wind_change_prob': 0.001 + (0.75 * difficulty),
+        'pattern_scale': 64,
+        'perturbation_angle_amplitude': 0.02 + (0.15 * difficulty),
+        'perturbation_strength_amplitude': 0.02 + (0.15 * difficulty),
+        
+        # Rotation du vent (Le tueur d'agent)
+        # difficulty 0 -> rotation 0
+        # difficulty 1 -> rotation +/- 0.025 rad par step
+        'rotation_bias': np.random.uniform(-0.025, 0.025) * difficulty,
+        'bias_strength': difficulty
+    }
     
-    # Assembler (15 features)
-    physics_features = np.array([
-        distance_to_goal,
-        angle_to_goal,
-        velocity_magnitude,
-        wind_magnitude,
-        directness,                
-        wind_goal_alignment,
-        relative_wind_angle,
-        predicted_distance,
-        predicted_improvement,
-        wind_ahead_alignment,
-        wind_ahead_magnitude,
-        wind_asymmetry,
-        ax,                        
-        ay,                        
-        np.cos(angle_to_goal),     
-    ], dtype=np.float32)
-    
-    return physics_features
+    return wind_init_params, wind_evol_params
 
 
-def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int], 
-                            feature_mean: np.ndarray, feature_std: np.ndarray) -> np.ndarray:
+
+
+def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarray:
     """
     Calcule les physics features normalisées avec mean/std.
     
@@ -173,72 +106,96 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int],
     Returns:
         Physics features normalisées (15 features)
     """
-    # Calculer features brutes
-    features_raw = compute_physics_features_raw(obs, goal)
+    x, y = obs[0], obs[1]
+    vx, vy = obs[2], obs[3]
+    wx, wy = obs[4], obs[5] # Vent local
     
-    # Normaliser avec mean/std
-    features_norm = (features_raw - feature_mean) / (feature_std + 1e-16)
+    # Constantes physiques (Hardcodées larges pour être sûr)
+    MAX_DIST = 50.0  # Diagonale de la map
+    MAX_SPEED = 7.0  # Vitesse max raisonnable du bateau
+    MAX_WIND = 7.0   # Vitesse max du vent
     
-    return features_norm
-
-
-
-def collect_normalization_stats(SailingEnv: SailingEnv=SailingEnv, n_episodes=500, save_path='normalization_stats.pkl', train_scenarios=['training_1', 'training_2', 'training_3']):
-    """
-    Collecte les statistiques (mean, std) des physics features.
-    À exécuter UNE FOIS avant l'entraînement.
+    # --- A. POSITION RELATIVE (Vecteur vers le but) ---
+    dx = goal[0] - x
+    dy = goal[1] - y
+    dist = np.sqrt(dx**2 + dy**2)
     
-    Args:
-        env: Environnement sailing
-        n_episodes: Nombre d'épisodes pour collecter les stats
-        save_path: Où sauvegarder les stats
-    
-    Returns:
-        (feature_mean, feature_std): Arrays numpy
-    """
-    print(f"Collecting normalization statistics over {n_episodes} episodes...")
-    
-    all_features = []
-    goal = (16, 31)
-    
-    for episode in range(n_episodes):
-        wind_scenarios = get_wind_scenario(np.random.choice(train_scenarios))
-        env = SailingEnv(**wind_scenarios)
-        obs, _ = env.reset(seed=episode)
+    # Vecteur direction vers le but (Normalisé)
+    if dist > 0:
+        dir_goal_x = dx / dist
+        dir_goal_y = dy / dist
+    else:
+        dir_goal_x, dir_goal_y = 0, 0
         
-        for step in range(200):
-            # Calculer les physics features SANS normalisation
-            features = compute_physics_features_raw(obs, goal)
-            all_features.append(features)
-            
-            # Action random
-            action = env.action_space.sample()
-            obs, _, done, truncated, _ = env.step(action)
-            
-            if done or truncated:
-                break
+    # Feature 1: Distance normalisée (0 à 1)
+    feat_dist = np.clip(dist / MAX_DIST, 0, 1)
+    
+    # --- B. VITESSE BATEAU ---
+    speed = np.sqrt(vx**2 + vy**2)
+    # Direction du bateau (si vitesse nulle, on prend 0,0)
+    if speed > 0.01:
+        dir_boat_x = vx / speed
+        dir_boat_y = vy / speed
+    else:
+        # Si à l'arrêt, on n'a pas vraiment de direction, 
+        # mais on peut garder la dernière ou mettre 0
+        dir_boat_x, dir_boat_y = 0, 0
+
+    # Feature 2: Vitesse normalisée (0 à 1)
+    feat_speed = np.clip(speed / MAX_SPEED, 0, 1)
+    
+    # --- C. VENT ---
+    wind_speed = np.sqrt(wx**2 + wy**2)
+    if wind_speed > 0:
+        dir_wind_x = wx / wind_speed
+        dir_wind_y = wy / wind_speed
+    else:
+        dir_wind_x, dir_wind_y = 0, 0
         
-        if (episode + 1) % 20 == 0:
-            print(f"  Episode {episode + 1}/{n_episodes}")
+    # Feature 3: Force du vent (0 à 1)
+    feat_wind_str = np.clip(wind_speed / MAX_WIND, 0, 1)
     
-    all_features = np.array(all_features)
+    # --- D. RELATIONS (Dot Products - Les features "intelligentes") ---
     
-    # Calculer mean et std
-    feature_mean = np.mean(all_features, axis=0)
-    feature_std = np.std(all_features, axis=0)
+    # Feature 4: Alignement Bateau / But 
+    # (Est-ce que je vais vers le but ? 1=oui, -1=dos au but)
+    feat_align_goal = (dir_boat_x * dir_goal_x) + (dir_boat_y * dir_goal_y)
     
-    # Éviter division par zéro
-    feature_std = np.where(feature_std < 1e-14, 1.0, feature_std)
+    # Feature 5: Alignement Vent / But 
+    # (Est-ce que le vent pousse vers le but ? 1=vent arrière vers but, -1=vent de face vers but)
+    # C'est crucial pour savoir si on doit tirer des bords (tacking)
+    feat_wind_goal = (dir_wind_x * dir_goal_x) + (dir_wind_y * dir_goal_y)
     
-    # Sauvegarder
-    with open(save_path, 'wb') as f:
-        pickle.dump({'mean': feature_mean, 'std': feature_std}, f)
+    # Feature 6: Angle d'incidence du vent sur le bateau (Cos)
+    # (Détermine l'efficacité de la voile)
+    feat_angle_wind = (dir_boat_x * dir_wind_x) + (dir_boat_y * dir_wind_y)
     
-    print(f"✓ Stats saved to {save_path}")
-    print(f"Feature means: {feature_mean}")
-    print(f"Feature stds: {feature_std}")
+    # Feature 7: Cross Product (Sinus) Bateau / But
+    # (Est-ce que le but est à ma gauche ou à ma droite ? Utile pour corriger la trajectoire)
+    feat_cross_goal = (dir_boat_x * dir_goal_y) - (dir_boat_y * dir_goal_x)
+
+    # Feature 8: Cross Product (Sinus) Bateau / Vent
+    # (Le vent vient-il de babord ou tribord ?)
+    feat_cross_wind = (dir_boat_x * dir_wind_y) - (dir_boat_y * dir_wind_x)
     
-    return feature_mean, feature_std
+    # --- E. COMBINAISON ---
+    # On retourne un vecteur dense de features toutes bornées ~[-1, 1]
+    features = np.array([
+        feat_dist,          # Proximité
+        feat_speed,         # Cinétique
+        feat_wind_str,      # Force vent
+        feat_align_goal,    # Cap ok ?
+        feat_wind_goal,     # Situation tactique (Vent favorable ?)
+        feat_angle_wind,    # Physics (Efficacité)
+        feat_cross_goal,    # Correction cap (Gauche/Droite)
+        feat_cross_wind,    # Amure (Babord/Tribord)
+        dir_boat_x,         # Orientation absolue X
+        dir_boat_y,         # Orientation absolue Y
+        dir_wind_x,         # Vent absolu X
+        dir_wind_y          # Vent absolu Y
+    ], dtype=np.float32)
+    
+    return features
 
 
 
@@ -256,7 +213,7 @@ class QNetworkCNN(nn.Module):
     - Combine: 128 → 128 → 9 actions
     """
     
-    def __init__(self, n_physics_features=15):
+    def __init__(self, n_physics_features=12):
         super(QNetworkCNN, self).__init__()
         
         self.wind_cnn = nn.Sequential(
@@ -343,7 +300,7 @@ class MyAgentDQN(BaseAgent):
             self.feature_std = stats['std']
         
         # Créer le réseau
-        self.q_network = QNetworkCNN(n_physics_features=15).to(self.device)
+        self.q_network = QNetworkCNN(n_physics_features=12).to(self.device)
         
         # Charger le modèle si fourni
         if model_path:
@@ -365,8 +322,7 @@ class MyAgentDQN(BaseAgent):
         wind_field = observation[6:].reshape(32, 32, 2)
         
         # Calculer physics features normalisées
-        physics = compute_physics_features(observation, self.goal, 
-                                          self.feature_mean, self.feature_std)
+        physics = compute_physics_features(observation, self.goal)
         
         # Convertir en tensors
         wind_tensor = torch.tensor(wind_field.transpose(2, 0, 1), 
@@ -468,7 +424,7 @@ class DQNTrainer:
     Classe pour entraîner l'agent DQN avec toutes les améliorations.
     """
     
-    def __init__(self, env, stats_path, learning_rate=1e-3, lr_decay=.9998,
+    def __init__(self, env,  learning_rate=1e-3, lr_decay=.9998,
                  epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995,
                  gamma=0.99, buffer_capacity=100000, batch_size=64,
                  learning_starts=1000, target_update_freq=1000,
@@ -488,14 +444,10 @@ class DQNTrainer:
         self.learning_starts = learning_starts
         self.gradient_clip = gradient_clip
         
-        # Charger les stats de normalisation
-        with open(stats_path, 'rb') as f:
-            stats = pickle.load(f)
-            self.feature_mean = stats['mean']
-            self.feature_std = stats['std']
+        
         
         # Networks
-        self.q_network = QNetworkCNN(n_physics_features=15).to(self.device)
+        self.q_network = QNetworkCNN(n_physics_features=12).to(self.device)
         self.target_network = deepcopy(self.q_network)
         
         # Optimizer avec scheduler
@@ -529,8 +481,6 @@ class DQNTrainer:
             'target_network_state_dict': self.target_network.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'epsilon': self.epsilon,
-            'feature_mean': self.feature_mean,
-            'feature_std': self.feature_std,
             'goal': self.goal,
             'eval_results': eval_results
         }
@@ -542,7 +492,7 @@ class DQNTrainer:
         checkpoint = torch.load(filepath)
         
         # Create trainer (will create new networks)
-        trainer = cls(env, stats_path=None, device='cpu')
+        trainer = cls(env, device='cpu')
         
         # Load states
         trainer.q_network.load_state_dict(checkpoint['q_network_state_dict'])
@@ -551,8 +501,6 @@ class DQNTrainer:
         trainer.epsilon = checkpoint['epsilon']
         trainer.episodes = checkpoint['episode']
         trainer.steps = checkpoint['steps']
-        trainer.feature_mean = checkpoint['feature_mean']
-        trainer.feature_std = checkpoint['feature_std']
         trainer.goal = checkpoint['goal']
         
         return trainer
@@ -564,7 +512,7 @@ class DQNTrainer:
         Returns:
             shaped_reward: Reward amélioré
         """
-        x, y = next_obs[0], next_obs[1]
+        x, y = obs[0], obs[1]
         vx, vy = next_obs[2], next_obs[3]
         
         # Distance au goal
@@ -574,7 +522,7 @@ class DQNTrainer:
         # Progress reward
         if self.prev_distance is not None:
             progress = self.prev_distance - distance
-            progress_reward = 9.0 * progress  # Coefficient fort
+            progress_reward = 9.0 * progress  
         else:
             progress_reward = 0.0
         
@@ -603,8 +551,7 @@ class DQNTrainer:
         
         # Extraire wind field et physics
         wind_field = obs[6:].reshape(32, 32, 2)
-        physics = compute_physics_features(obs, self.goal, 
-                                          self.feature_mean, self.feature_std)
+        physics = compute_physics_features(obs, self.goal)
         
         # Tensors
         wind_tensor = torch.tensor(wind_field.transpose(2, 0, 1), 
@@ -692,10 +639,8 @@ class DQNTrainer:
             wind_field = obs[6:].reshape(32, 32, 2)
             next_wind_field = next_obs[6:].reshape(32, 32, 2)
             
-            physics = compute_physics_features(obs, self.goal, 
-                                              self.feature_mean, self.feature_std)
-            next_physics = compute_physics_features(next_obs, self.goal,
-                                                   self.feature_mean, self.feature_std)
+            physics = compute_physics_features(obs, self.goal)
+            next_physics = compute_physics_features(next_obs, self.goal)
             
             # Push to buffer
             self.replay_buffer.push(
@@ -759,9 +704,13 @@ class DQNTrainer:
         best_eval_reward = -np.inf
         
         for episode in range(num_episodes):
-            scenario_name = np.random.choice(self.train_scenarios)
-            wind_scenarios = get_wind_scenario(scenario_name)
-            self.env = SailingEnv(**wind_scenarios)
+
+            progress = episode / num_episodes
+            init_params, evol_params = generate_curriculum_params(progress)
+                    
+            
+
+            self.env = SailingEnv(wind_init_params=init_params, wind_evol_params=evol_params)
             # Collect episode
             episode_reward = self.collect_episode()
 
@@ -821,7 +770,6 @@ class DQNTrainer:
     def save_model(self, path='dqn_model.pth'):
         """Sauvegarde le modèle."""
         torch.save(self.q_network.state_dict(), path)
-
 
 
 

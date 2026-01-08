@@ -50,10 +50,6 @@ environment:
   goal: [16, 31]
   grid_size: [32, 32]
 
-# Normalization stats
-normalization:
-  stats_path: "data/normalization_stats.pkl"
-  collect_n_episodes: 1500    # Episodes to collect stats
 
 # Checkpointing
 checkpoint:
