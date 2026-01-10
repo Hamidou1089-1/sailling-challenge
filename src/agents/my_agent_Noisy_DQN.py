@@ -45,12 +45,12 @@ def generate_curriculum_params(progress):
     # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
     # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
     # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
-    if np.random.random() < 0.3:
-        difficulty = 0.0  # Mode "Repos / Fondamentaux"
+    if np.random.random() < 0.25:
+        difficulty = 0.1  # Mode "Repos / Fondamentaux"
     else:
         # La difficulté suit la progression. 
         # On ajoute un petit bruit pour ne pas être trop linéaire.
-        difficulty = np.clip(progress + np.random.uniform(-0.1, 0.1), 0.0, 1.0)
+        difficulty = np.clip(progress + np.random.uniform(-0.2, 0.5), 0.0, 1.0)
 
     # --- 3. PARAMÈTRES DU VENT ---
     
@@ -69,24 +69,24 @@ def generate_curriculum_params(progress):
         'pattern_scale': 128 - int(122 * difficulty), 
         
         # Force des turbulences
-        'pattern_strength': 0.1 + (0.6 * difficulty),
-        'strength_variation': 0.1 + (0.6 * difficulty),
-        'noise': 0.01 + (0.25 * difficulty)
+        'pattern_strength': 0.2 + (0.6 * difficulty),
+        'strength_variation': 0.2 + (0.6 * difficulty),
+        'noise': 0.03 + (0.25 * difficulty)
     }
     
     # --- 4. EVOLUTION DYNAMIQUE ---
     wind_evol_params = {
         # Probabilité de changement : De 0% (Stable) à 90% (Chaos)
-        'wind_change_prob': 0.001 + (0.75 * difficulty),
+        'wind_change_prob': np.clip(0.3 + (0.75 * difficulty), 0.3, 1.0),
         'pattern_scale': 64,
-        'perturbation_angle_amplitude': 0.02 + (0.15 * difficulty),
-        'perturbation_strength_amplitude': 0.02 + (0.15 * difficulty),
+        'perturbation_angle_amplitude': 0.08 + (0.15 * difficulty),
+        'perturbation_strength_amplitude': 0.08 + (0.15 * difficulty),
         
         # Rotation du vent (Le tueur d'agent)
         # difficulty 0 -> rotation 0
         # difficulty 1 -> rotation +/- 0.025 rad par step
-        'rotation_bias': np.random.uniform(-0.025, 0.025) * difficulty,
-        'bias_strength': difficulty
+        'rotation_bias': 0.01 + np.random.uniform(-0.08, 0.08) * (0.35 + difficulty),
+        'bias_strength': difficulty*1.5
     }
     
     return wind_init_params, wind_evol_params
@@ -209,7 +209,7 @@ class NoisyLinear(nn.Module):
     Une couche linéaire avec du bruit paramétrique pour l'exploration.
     y = (mu_w + sigma_w * eps_w) x + (mu_b + sigma_b * eps_b)
     """
-    def __init__(self, in_features, out_features, std_init=0.5):
+    def __init__(self, in_features, out_features, std_init=1.5):
         super(NoisyLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -336,7 +336,7 @@ class PrioritizedReplayBuffer:
         self.alpha = alpha
         self.beta = beta_start
         self.beta_increment = (1.0 - beta_start) / beta_frames
-        self.epsilon = 0.01  # Petit constant pour éviter priorité = 0
+        self.epsilon = 0.09  # Petit constant pour éviter priorité = 0
         self.abs_err_upper = 1.0  # Clip l'erreur TD
         self.frame = 1
         self.device = device
@@ -605,17 +605,17 @@ class DQNTrainer:
         # Bonus de progression
         if self.prev_distance is not None:
             progress = self.prev_distance - current_dist
-            shaped_reward += progress * 9
+            shaped_reward += progress * 5
         
         self.prev_distance = current_dist
         
         # Pénalité de distance (encourage à se rapprocher)
-        shaped_reward -= current_dist * 0.1
+        shaped_reward -= current_dist * 0.09
         
         # Bonus de vitesse (encourage le mouvement)
         vx, vy = next_obs[2], next_obs[3]
         speed = np.sqrt(vx**2 + vy**2)
-        shaped_reward += speed * 0.50 - 0.5
+        shaped_reward += speed * 0.39 - 0.5 # penalise number of step
         
         return shaped_reward
     
@@ -823,7 +823,7 @@ class DQNTrainer:
             
             # Eval
             if episode % eval_freq == 0 and episode > 0:
-                eval_reward, success_rate = self.evaluate(n_episodes=5)
+                eval_reward, success_rate = self.evaluate(n_episodes=10)
                 
                 if self.writer:
                     self.writer.add_scalar('Eval/Reward', eval_reward, episode)

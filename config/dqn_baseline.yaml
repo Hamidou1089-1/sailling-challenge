@@ -9,10 +9,10 @@ agent:
   
   # Buffer
   buffer_capacity: 200000
-  batch_size: 128
+  batch_size: 64
   
   # Target network
-  target_update_freq: 1000  # Plus fréquent avec PER (toutes les 500 steps)
+  target_update_freq: 500  # Plus fréquent avec PER (toutes les 500 steps)
   
   # Algorithme
   use_double_dqn: true
@@ -27,7 +27,7 @@ agent:
 training:
   num_episodes: 12000
   eval_freq: 100    # Évalue tous les 100 épisodes
-  save_freq: 2000   # Sauvegarde tous les 1000 épisodes
+  save_freq: 1000   # Sauvegarde tous les 1000 épisodes
   
   # Scenarios d'entraînement (curriculum learning activé automatiquement)
   train_scenarios:
