@@ -1,0 +1,63 @@
+# DQN Baseline Configuration
+# Safe conservative settings for initial training
+
+# Training parameters
+training:
+  num_episodes: 6000
+  max_steps_per_episode: 150
+  eval_freq: 4000          # Evaluate every N step
+  save_freq: 2000        # Save checkpoint every N episodes
+  log_freq: 1000            # Log to TensorBoard every N episodes
+  
+  # Wind scenarios for training
+  train_scenarios: ['training_1', 'training_2', 'training_3']
+  eval_scenarios: ['training_1', 'training_2', 'training_3']
+  
+  # Reproducibility
+  seed: 42
+
+# Agent hyperparameters
+agent:
+  # Learning rate
+  learning_rate: 0.004   # Conservative 3e-4
+  lr_decay: 0.99998        # Slow decay
+  min_lr: 0.0005         # Floor
+  
+  # Exploration (epsilon-greedy)
+  epsilon_start: 1.0
+  epsilon_end: 0.008       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.99998   # Linear decay over ~14k steps to reach 0.01
+  
+  # Discount factor
+  gamma: 0.99
+  
+  # Experience replay
+  buffer_capacity: 100000
+  batch_size: 64
+  learning_starts: 200   # Start learning after N steps
+  
+  # Target network
+  target_update_type: "hard"  # Options: "hard" or "soft"
+  target_update_freq: 5000    # For hard update (every N steps)
+  tau: 0.005                  # For soft update (not used if hard)
+  
+  # Network architecture
+  use_double_dqn: true        # Enable Double DQN (recommended)
+  gradient_clip: 20.0         # Clip gradients
+  
+# Environment
+environment:
+  goal: [16, 31]
+  grid_size: [32, 32]
+
+
+# Checkpointing
+checkpoint:
+  save_dir: "checkpoints/dqn"
+  resume_from: null           # Path to checkpoint to resume from
+
+# Logging
+logging:
+  tensorboard_dir: "runs/dqn"
+  experiment_name: "dqn_baseline"
+  log_gradients: false        # Log gradient histograms (expensive)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Training script for DQN agent."""
+"""Training script for DQN agent with NoisyNet + PER."""
 
 import argparse
 import yaml
@@ -12,13 +12,13 @@ from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.agents.my_agent_DQN import DQNTrainer
-from src.utils.save_my_dqn import save_dqn_agent
+from src.agents.my_agent_Noisy_DQN import DQNTrainer
+from src.utils.save_my_noisy_dqn import save_dqn_agent
 from wind_scenarios import get_wind_scenario
 from wind_scenarios.env_sailing import SailingEnv
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train DQN agent")
+    parser = argparse.ArgumentParser(description="Train DQN agent with NoisyNet + PER")
     parser.add_argument('--config', type=str, required=True)
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'])
     parser.add_argument('--collect-stats', action='store_true')
@@ -53,38 +53,45 @@ def main():
     print(f"📊 TensorBoard dir: {tb_dir}")
     
     # Create trainer
-    print("\nCreating DQN trainer...")
+    print("\n🎮 Creating DQN trainer with NoisyNet + PER...")
     trainer = DQNTrainer(
         env,
         learning_rate=config['agent']['learning_rate'],
-        lr_decay=config['agent'].get('lr_decay', 1.0),
-        epsilon_start=config['agent']['epsilon_start'],
-        epsilon_end=config['agent']['epsilon_end'],
-        epsilon_decay=config['agent']['epsilon_decay'],
+        lr_decay=config['agent'].get('lr_decay', 0.9999),
         gamma=config['agent']['gamma'],
         buffer_capacity=config['agent']['buffer_capacity'],
         batch_size=config['agent']['batch_size'],
         target_update_freq=config['agent']['target_update_freq'],
-        use_double_dqn=config['agent'].get('use_double_dqn', True),  
+        use_double_dqn=config['agent'].get('use_double_dqn', True),
+        use_noisy_net=config['agent'].get('use_noisy_net', True),
+        use_per=config['agent'].get('use_per', True),
+        per_alpha=config['agent'].get('per_alpha', 0.6),
+        per_beta_start=config['agent'].get('per_beta_start', 0.4),
+        per_beta_frames=config['agent'].get('per_beta_frames', 120000),
         device=args.device,
         tensorboard_dir=tb_dir,
         train_scenarios=train_scenarios
     )
     
     print(f"Network: {sum(p.numel() for p in trainer.q_network.parameters()):,} parameters")
+    print(f"   NoisyNet: {trainer.use_noisy_net}")
+    print(f"   PER: {trainer.use_per}")
+    print(f"   Double DQN: {trainer.use_double_dqn}")
     
     # Resume
     if args.resume_from:
         checkpoint = torch.load(args.resume_from, map_location=args.device)
         trainer.q_network.load_state_dict(checkpoint)
-        print(f"Resumed from {args.resume_from}")
+        print(f"✓ Resumed from {args.resume_from}")
     
     # Train
     num_episodes = config['training']['num_episodes']
     eval_freq = config['training']['eval_freq']
     save_freq = config['training']['save_freq']
     
-    print(f"\nStarting training for {num_episodes} episodes...")
+    print(f"\n🚀 Starting training for {num_episodes} episodes...")
+    print(f"   Eval frequency: every {eval_freq} episodes")
+    print(f"   Save frequency: every {save_freq} episodes")
     
     trainer.train(
         num_episodes=num_episodes,
@@ -103,8 +110,10 @@ def main():
     save_dqn_agent(trainer, output_path)
     
     print(f"\n✅ Training complete!")
-    print(f"📁 Submission: {output_path}")
+    print(f"📝 Submission: {output_path}")
     print(f"💾 Checkpoint: {final_path}")
+    print(f"\n📊 View training progress:")
+    print(f"   tensorboard --logdir={tb_dir}")
 
 if __name__ == '__main__':
     main()

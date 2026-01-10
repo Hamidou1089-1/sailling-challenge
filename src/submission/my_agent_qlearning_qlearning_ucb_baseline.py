@@ -9,7 +9,7 @@ This file contains a trained Q-learning agent with advanced state features:
 """
 
 import numpy as np
-from src.agents.base_agent import BaseAgent
+from evaluator.base_agent import BaseAgent
 
 
 class MyAgent(BaseAgent):
