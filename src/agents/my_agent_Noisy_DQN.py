@@ -113,8 +113,8 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     
     # Constantes physiques (Hardcodées larges pour être sûr)
     MAX_DIST = 50.0  # Diagonale de la map
-    MAX_SPEED = 7.0  # Vitesse max raisonnable du bateau
-    MAX_WIND = 7.0   # Vitesse max du vent
+    MAX_SPEED = 6.0  # Vitesse max raisonnable du bateau
+    MAX_WIND = 6.0   # Vitesse max du vent
     
     # --- A. POSITION RELATIVE (Vecteur vers le but) ---
     dx = goal[0] - x
@@ -614,14 +614,14 @@ class DQNTrainer:
         # Bonus de progression
         if self.prev_distance is not None:
             progress = self.prev_distance - current_dist
-            shaped_reward += progress * 9
+            shaped_reward += progress * 4
         
         self.prev_distance = current_dist
         
         # Bonus de vitesse (encourage le mouvement)
         vx, vy = next_obs[2], next_obs[3]
         speed = np.sqrt(vx**2 + vy**2)
-        shaped_reward += speed * 0.49 - 0.5 # penalise number of step
+        shaped_reward += speed * 0.39 - 0.7 # penalise number of step
 
         if done:
             self.prev_distance = None

@@ -19,7 +19,7 @@ training:
 # Agent hyperparameters
 agent:
   # Learning rate
-  learning_rate: 0.004   # Conservative 3e-4
+  learning_rate: 0.005   # Conservative 3e-4
   lr_decay: 0.99998        # Slow decay
   min_lr: 0.0005         # Floor
   
@@ -32,7 +32,7 @@ agent:
   gamma: 0.99
   
   # Experience replay
-  buffer_capacity: 100000
+  buffer_capacity: 300000
   batch_size: 64
   learning_starts: 200   # Start learning after N steps
   
@@ -43,7 +43,7 @@ agent:
   
   # Network architecture
   use_double_dqn: true        # Enable Double DQN (recommended)
-  gradient_clip: 20.0         # Clip gradients
+  gradient_clip: 10.0         # Clip gradients
   
 # Environment
 environment:

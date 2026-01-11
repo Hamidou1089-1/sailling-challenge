@@ -68,24 +68,22 @@ def generate_curriculum_params(progress):
         'pattern_scale': 128 - int(122 * difficulty), 
         
         # Force des turbulences
-        'pattern_strength': 0.1 + (0.6 * difficulty),
-        'strength_variation': 0.1 + (0.6 * difficulty),
-        'noise': 0.01 + (0.25 * difficulty)
+        'pattern_strength': 0.1 + (0.5 * difficulty),
+        'strength_variation': 0.08 + (0.5 * difficulty),
+        'noise': 0.085 + (0.05 * difficulty)
     }
     
     # --- 4. EVOLUTION DYNAMIQUE ---
     wind_evol_params = {
         # Probabilité de changement : De 0% (Stable) à 90% (Chaos)
-        'wind_change_prob': 0.001 + (0.75 * difficulty),
-        'pattern_scale': 64,
-        'perturbation_angle_amplitude': 0.02 + (0.15 * difficulty),
-        'perturbation_strength_amplitude': 0.02 + (0.15 * difficulty),
+        'wind_change_prob': 0.15 + (0.75 * difficulty),
+        'pattern_scale': 128,
+        'perturbation_angle_amplitude': 0.085 + (0.15 * difficulty),
+        'perturbation_strength_amplitude': 0.085 + (0.15 * difficulty),
         
-        # Rotation du vent (Le tueur d'agent)
-        # difficulty 0 -> rotation 0
-        # difficulty 1 -> rotation +/- 0.025 rad par step
-        'rotation_bias': np.random.uniform(-0.025, 0.025) * difficulty,
-        'bias_strength': difficulty
+        
+        'rotation_bias': np.random.uniform(-0.045, 0.045) * difficulty,
+        'bias_strength': np.clip(difficulty + 0.15, 0, 1.0) 
     }
     
     return wind_init_params, wind_evol_params
@@ -517,7 +515,7 @@ class DQNTrainer:
         # Progress reward
         if self.prev_distance is not None:
             progress = self.prev_distance - distance
-            progress_reward = 9.0 * progress  
+            progress_reward = 15.0 * progress  
         else:
             progress_reward = 0.0
         
@@ -525,10 +523,10 @@ class DQNTrainer:
         
         # Velocity reward
         velocity = np.linalg.norm([vx, vy])
-        velocity_reward = 0.39 * velocity
+        velocity_reward = 0.9 * velocity
         
         # Malus de step
-        step_penalty = -0.5
+        step_penalty = -1.5
         
         # Shaped reward
         shaped_reward = raw_reward + progress_reward + velocity_reward + step_penalty
@@ -720,7 +718,7 @@ class DQNTrainer:
 
             
             # Log
-            if verbose and episode % 100 == 0:
+            if verbose and episode % 10 == 0:
                 current_lr = self.scheduler.get_last_lr()[0]
                 print(f"Episode {episode}/{num_episodes} | "
                       f"Reward: {episode_reward:.2f} | "

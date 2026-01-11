@@ -2,7 +2,7 @@ import numpy as np # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 from matplotlib.patches import Circle, Arrow # type: ignore
 from typing import Tuple, Dict, Any, Optional # type: ignore
-from wind_scenarios.sailing_physics import calculate_sailing_efficiency # type: ignore
+from .sailing_physics import calculate_sailing_efficiency # type: ignore
 import gymnasium as gym # type: ignore
 
 class SailingEnv(gym.Env): # type: ignore

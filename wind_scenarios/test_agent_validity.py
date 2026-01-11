@@ -35,13 +35,13 @@ sys.path.append(os.path.abspath('..'))
 
 # Import with proper path handling
 try:
-    from agents.base_agent import BaseAgent
-    from env_sailing import SailingEnv
+    from src.agents.base_agent import BaseAgent
+    from .env_sailing import SailingEnv
 except ImportError:
     try:
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from agents.base_agent import BaseAgent
-        from env_sailing import SailingEnv
+        from src.agents.base_agent import BaseAgent
+        from .env_sailing import SailingEnv
     except ImportError:
         print(f"{RED}Error: Unable to import required modules.{RESET}")
         print("Make sure you're running this script from the repository root or src directory.")
