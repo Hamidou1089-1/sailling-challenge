@@ -3,9 +3,9 @@
 
 # Training parameters
 training:
-  num_episodes: 60000
-  max_steps_per_episode: 150
-  eval_freq: 100          # Evaluate every N step
+  num_episodes: 20000
+  max_steps_per_episode: 200
+  eval_freq: 100          # Evaluate every N episodes
   save_freq: 2000        # Save checkpoint every N episodes
   log_freq: 1000            # Log to TensorBoard every N episodes
   
@@ -20,20 +20,20 @@ training:
 agent:
   # Learning rate
   learning_rate: 0.005   # Conservative 3e-4
-  lr_decay: 0.999998        # Slow decay
-  min_lr: 0.0005         # Floor
+  lr_decay: 0.999988        # Slow decay
+  min_lr: 0.00012         # Floor
   
   # Exploration (epsilon-greedy)
   epsilon_start: 1.0
-  epsilon_end: 0.008       # Changed from 0.05 to 0.01 for more exploitation
-  epsilon_decay: 0.999998   # Linear decay over ~14k steps to reach 0.01
+  epsilon_end: 0.0008       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.999988   # Linear decay over ~14k steps to reach 0.01
   
   # Discount factor
   gamma: 0.99
   
   # Experience replay
-  buffer_capacity: 300000
-  batch_size: 64
+  buffer_capacity: 200000
+  batch_size: 128
   learning_starts: 200   # Start learning after N steps
   
   # Target network

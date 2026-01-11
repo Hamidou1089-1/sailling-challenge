@@ -3,12 +3,12 @@
 
 agent:
   # Learning
-  learning_rate: 0.004
-  lr_decay: 0.99995  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
+  learning_rate: 0.005
+  lr_decay: 0.999988  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
   gamma: 0.99
   
   # Buffer
-  buffer_capacity: 100000
+  buffer_capacity: 200000
   batch_size: 64
   
   # Target network
@@ -25,7 +25,7 @@ agent:
   per_beta_frames: 12000  # ~12k episodes * 10 steps/episode moyenne
 
 training:
-  num_episodes: 5000
+  num_episodes: 20000
   eval_freq: 50    # Évalue tous les 100 épisodes
   save_freq: 1000   # Sauvegarde tous les 1000 épisodes
   

@@ -21,7 +21,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train DQN agent")
     parser.add_argument('--config', type=str, required=True)
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'])
-    parser.add_argument('--collect-stats', action='store_true')
     parser.add_argument('--resume-from', type=str, default=None)
     return parser.parse_args()
 
@@ -99,7 +98,7 @@ def main():
     trainer.save_model(str(final_path))
     
     exp_name = config['logging']['experiment_name']
-    output_path = f"src/submission/my_agent_dqn_{exp_name}.py"
+    output_path = f"src/submission/my_agent_new_train_{exp_name}.py"
     save_dqn_agent(trainer, output_path)
     
     print(f"\n✅ Training complete!")
