@@ -438,19 +438,24 @@ class QNetworkCNN(nn.Module):
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), # 8x8 -> 4x4
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d(1)  # 4x4 -> 1x1 (Global Average Pooling)
+            nn.AdaptiveAvgPool2d(1),  # 4x4 -> 1x1 (Global Average Pooling)
+            nn.Flatten()
         )
         
         # MLP pour les physics features (avec NoisyLinear si activé)
         if use_noisy_net:
             self.physics_mlp = nn.Sequential(
                 NoisyLinear(n_physics_features, 64),
-                nn.ReLU()
+                nn.ReLU(),
+                NoisyLinear(64, 64),
+                nn.ReLU(),
             )
         else:
             self.physics_mlp = nn.Sequential(
                 nn.Linear(n_physics_features, 64),
-                nn.ReLU()
+                nn.ReLU(),
+                nn.Linear(64, 64),
+                nn.ReLU(),
             )
         
         # Combinaison des features (avec NoisyLinear si activé)
@@ -458,10 +463,14 @@ class QNetworkCNN(nn.Module):
             self.combine = nn.Sequential(
                 NoisyLinear(128, 128),
                 nn.ReLU(),
-                NoisyLinear(128, 9)  # 9 actions
+                NoisyLinear(128, 128), 
+                nn.ReLU(),
+                NoisyLinear(128, 9)
             )
         else:
             self.combine = nn.Sequential(
+                nn.Linear(128, 128),
+                nn.ReLU(),
                 nn.Linear(128, 128),
                 nn.ReLU(),
                 nn.Linear(128, 9)
@@ -514,7 +523,7 @@ class DQNTrainer:
         gamma=0.99,
         buffer_capacity=100000,
         batch_size=64,
-        target_update_freq=500,
+        target_update_freq=1000,
         use_double_dqn=True,
         use_noisy_net=True,
         use_per=True,
@@ -605,17 +614,17 @@ class DQNTrainer:
         # Bonus de progression
         if self.prev_distance is not None:
             progress = self.prev_distance - current_dist
-            shaped_reward += progress * 5
+            shaped_reward += progress * 9
         
         self.prev_distance = current_dist
-        
-        # Pénalité de distance (encourage à se rapprocher)
-        shaped_reward -= current_dist * 0.09
         
         # Bonus de vitesse (encourage le mouvement)
         vx, vy = next_obs[2], next_obs[3]
         speed = np.sqrt(vx**2 + vy**2)
-        shaped_reward += speed * 0.39 - 0.5 # penalise number of step
+        shaped_reward += speed * 0.49 - 0.5 # penalise number of step
+
+        if done:
+            self.prev_distance = None
         
         return shaped_reward
     
