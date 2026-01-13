@@ -105,7 +105,7 @@ def generate_curriculum_params(progress):
     # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
     # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
     # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
-    if np.random.random() < 0.2:
+    if np.random.random() < 0.3:
         difficulty = 0.0  # Mode "Repos / Fondamentaux"
     else:
         # La difficulté suit la progression. 
@@ -282,7 +282,8 @@ class QNetworkCNN(nn.Module):
             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), # 8×8 → 4×4
             nn.ReLU(),
             nn.AdaptiveAvgPool2d(1),  # 4×4×64 → 1×1×64 (GAP)
-            nn.Flatten(),  # 64 features (pas de Linear !)
+            nn.Flatten()
+            #nn.Linear(64, 1) 
         )
         
         # MLP pour physics features
@@ -575,7 +576,7 @@ class DQNTrainer:
         # Progress reward
         if self.prev_distance is not None:
             progress = self.prev_distance - distance
-            progress_reward = 15.0 * progress  
+            progress_reward = 10.0 * progress  
         else:
             progress_reward = 0.0
         

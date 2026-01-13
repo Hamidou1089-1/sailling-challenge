@@ -31,7 +31,7 @@ BOLD = '\033[1m'
 RESET = '\033[0m'
 
 # Add the parent directory to sys.path
-sys.path.append(os.path.abspath('..'))
+#sys.path.append(os.path.abspath('..'))
 
 # Import with proper path handling
 try:

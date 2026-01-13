@@ -109,12 +109,12 @@ def generate_curriculum_params(progress):
     # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
     # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
     # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
-    if np.random.random() < 0.2:
+    if np.random.random() < 0.3:
         difficulty = 0.0  # Mode "Repos / Fondamentaux"
     else:
         # La difficulté suit la progression. 
         # On ajoute un petit bruit pour ne pas être trop linéaire.
-        difficulty = np.clip(progress + np.random.uniform(-1, 1), 0.0, 1.0)
+        difficulty = np.clip(progress + np.random.uniform(-0.5, 0.5), 0.0, 1.0)
 
     # --- 3. PARAMÈTRES DU VENT ---
     
@@ -501,6 +501,7 @@ class QNetworkCNN(nn.Module):
             nn.ReLU(),
             nn.AdaptiveAvgPool2d(1),  # 4x4 -> 1x1 (Global Average Pooling)
             nn.Flatten()
+            #nn.Linear(64, 1)
         )
         
         # MLP pour les physics features (avec NoisyLinear si activé)
