@@ -9,7 +9,7 @@ agent:
   
   # Buffer
   buffer_capacity: 200000
-  batch_size: 512
+  batch_size: 128
   
   # Target network
   target_update_freq: 5000  # Plus fréquent avec PER (toutes les 500 steps)
@@ -25,7 +25,7 @@ agent:
   per_beta_frames: 520000  # ~12k episodes * 10 steps/episode moyenne
 
 training:
-  num_episodes: 60000
+  num_episodes: 30000
   eval_freq: 100    # Évalue tous les 100 épisodes
   save_freq: 1000   # Sauvegarde tous les 1000 épisodes
   
