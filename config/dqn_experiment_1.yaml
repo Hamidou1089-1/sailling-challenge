@@ -19,7 +19,7 @@ training:
 # Agent hyperparameters
 agent:
   # Learning rate
-  learning_rate: 0.009   # Conservative 3e-4
+  learning_rate: 0.004   # Conservative 3e-4
   lr_decay: 0.999998        # Slow decay
   min_lr: 0.00012         # Floor
   
@@ -33,7 +33,7 @@ agent:
   
   # Experience replay
   buffer_capacity: 200000
-  batch_size: 128
+  batch_size: 64
   learning_starts: 500   # Start learning after N steps
   
   # Target network

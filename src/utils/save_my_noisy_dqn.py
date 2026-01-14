@@ -1,11 +1,7 @@
 """
 Utility to save DQN agents for Codabench submission (Pure NumPy - No PyTorch).
 
-VERSION OPTIMISÉE : Poids écrits directement en dur dans le code
-- ✅ Pas de décodage base64 (très lent)
-- ✅ Pas de pickle
-- ✅ Chargement instantané
-- ✅ Inférence rapide (proche de PyTorch)
+
 """
 
 import os
