@@ -3,7 +3,7 @@
 
 # Training parameters
 training:
-  num_episodes: 30000
+  num_episodes: 80000
   max_steps_per_episode: 200
   eval_freq: 100          # Evaluate every N episodes
   save_freq: 5000        # Save checkpoint every N episodes
