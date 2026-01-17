@@ -114,7 +114,7 @@ def generate_curriculum_params(progress):
     else:
         # La difficulté suit la progression. 
         # On ajoute un petit bruit pour ne pas être trop linéaire.
-        difficulty = np.clip(progress + np.random.uniform(-0.5, 0.5), 0.0, 1.0)
+        difficulty = np.clip(progress + np.random.uniform(-0.2, 0.2), 0.0, 1.0)
 
     # --- 3. PARAMÈTRES DU VENT ---
     
@@ -122,7 +122,7 @@ def generate_curriculum_params(progress):
     # Plus c'est dur, plus on s'éloigne de cette norme (vent très faible ou tempête).
     # difficulty 0 -> speed 3.0
     # difficulty 1 -> speed entre 1.0 et 5.0
-    speed_noise = np.random.uniform(-2.0, 2.0) * difficulty
+    speed_noise = np.random.uniform(-.5, .5) * difficulty
     base_speed = 3.0 + speed_noise
     
     wind_init_params = {

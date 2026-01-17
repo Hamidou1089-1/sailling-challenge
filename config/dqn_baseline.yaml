@@ -3,16 +3,16 @@
 
 agent:
   # Learning
-  learning_rate: 0.009
-  lr_decay: 0.999998  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
+  learning_rate: 0.003
+  lr_decay: 0.99999  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
   gamma: 0.99
   
   # Buffer
-  buffer_capacity: 200000
+  buffer_capacity: 100000
   batch_size: 128
   
   # Target network
-  target_update_freq: 5000  # Plus fréquent avec PER (toutes les 500 steps)
+  target_update_freq: 1000  # Plus fréquent avec PER (toutes les 500 steps)
   
   # Algorithme
   use_double_dqn: true
@@ -25,9 +25,9 @@ agent:
   per_beta_frames: 520000  # ~12k episodes * 10 steps/episode moyenne
 
 training:
-  num_episodes: 30000
+  num_episodes: 3000
   eval_freq: 100    # Évalue tous les 100 épisodes
-  save_freq: 1000   # Sauvegarde tous les 1000 épisodes
+  save_freq: 100   # Sauvegarde tous les 1000 épisodes
   
   # Scenarios d'entraînement (curriculum learning activé automatiquement)
   train_scenarios:
