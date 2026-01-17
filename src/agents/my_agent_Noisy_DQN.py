@@ -705,7 +705,6 @@ class DQNTrainer:
         else:
             # Fallback to normal replay buffer if needed
             self.replay_buffer = ReplayBuffer(buffer_capacity, self.device)
-            raise NotImplementedError("Normal replay buffer not implemented in this version")
         
         # Logging
         self.writer = SummaryWriter(tensorboard_dir) if tensorboard_dir else None
@@ -738,14 +737,14 @@ class DQNTrainer:
         # Bonus de progression
         if self.prev_distance is not None:
             progress = self.prev_distance - current_dist
-            shaped_reward += progress * 15
+            shaped_reward += progress * 10
         
         self.prev_distance = current_dist
         
         # Bonus de vitesse (encourage le mouvement)
         vx, vy = next_obs[2], next_obs[3]
         speed = np.sqrt(vx**2 + vy**2)
-        shaped_reward += speed * 0.9 - 2 # penalise number of step
+        shaped_reward += speed * 0.9 - 1 # penalise number of step
 
         if done:
             self.prev_distance = None
@@ -782,8 +781,11 @@ class DQNTrainer:
             return None
         
         # Sample batch avec PER
-        wind, physics, actions, rewards, next_wind, next_physics, dones, indices, weights = \
-            self.replay_buffer.sample(self.batch_size)
+        if self.use_per:
+            wind, physics, actions, rewards, next_wind, next_physics, dones, indices, weights = \
+                self.replay_buffer.sample(self.batch_size)
+        else:
+            wind, physics, actions, rewards, next_wind, next_physics, dones = self.replay_buffer.sample(self.batch_size)
         
         # Compute Q(s, a)
         q_values = self.q_network(wind, physics)
@@ -802,12 +804,19 @@ class DQNTrainer:
                 next_q_value = next_q_values.max(1).values
             
             target = rewards + self.gamma * next_q_value * (1 - dones)
+
         
-        # TD errors (pour PER)
-        td_errors = (q_value - target).detach().cpu().numpy()
         
-        # Loss avec importance sampling weights
-        loss = (weights * F.smooth_l1_loss(q_value, target, reduction='none')).mean()
+        # Loss
+        if self.use_per:
+            td_errors = (q_value - target).detach().cpu().numpy()
+        
+            # Loss avec importance sampling weights
+            loss = (weights * F.smooth_l1_loss(q_value, target, reduction='none')).mean()
+        else:
+            loss = F.smooth_l1_loss(q_value, target)
+        
+        
         
         # Optimize
         self.optimizer.zero_grad()
