@@ -9,7 +9,7 @@ agent:
   
   # Buffer
   buffer_capacity: 100000
-  batch_size: 128
+  batch_size: 68
   
   # Target network
   target_update_freq: 1000  # Plus fréquent avec PER (toutes les 500 steps)
@@ -17,7 +17,7 @@ agent:
   # Algorithme
   use_double_dqn: true
   use_noisy_net: true  # Remplace epsilon-greedy
-  use_per: true        # Prioritized Experience Replay
+  use_per: false        # Prioritized Experience Replay
   
   # PER parameters
   per_alpha: 0.2           # Niveau de priorisation (0=uniforme, 1=full priorité)
@@ -25,7 +25,7 @@ agent:
   per_beta_frames: 520000  # ~12k episodes * 10 steps/episode moyenne
 
 training:
-  num_episodes: 3000
+  num_episodes: 4000
   eval_freq: 100    # Évalue tous les 100 épisodes
   save_freq: 100   # Sauvegarde tous les 1000 épisodes
   

@@ -381,6 +381,67 @@ class SumTree:
         return (idx, self.tree[idx], self.data[data_idx])
 
 
+
+class ReplayBuffer:
+    """Replay buffer optimisé avec wind field séparé."""
+    
+    def __init__(self, capacity, device):
+        self.capacity = capacity
+        self.device = device
+        self.position = 0
+        self.size = 0
+        
+        # Stockage séparé pour économiser la mémoire
+        self.wind_fields = np.zeros((capacity, 32, 32, 2), dtype=np.float32)
+        self.physics = np.zeros((capacity, 12), dtype=np.float32)
+        self.actions = np.zeros(capacity, dtype=np.int64)
+        self.rewards = np.zeros(capacity, dtype=np.float32)
+        self.next_wind_fields = np.zeros((capacity, 32, 32, 2), dtype=np.float32)
+        self.next_physics = np.zeros((capacity, 12), dtype=np.float32)
+        self.dones = np.zeros(capacity, dtype=np.float32)
+    
+    def push(self, wind_field, physics, action, reward, next_wind_field, next_physics, done):
+        """Ajoute une transition."""
+        idx = self.position
+        
+        self.wind_fields[idx] = wind_field
+        self.physics[idx] = physics
+        self.actions[idx] = action
+        self.rewards[idx] = reward
+        self.next_wind_fields[idx] = next_wind_field
+        self.next_physics[idx] = next_physics
+        self.dones[idx] = float(done)
+        
+        self.position = (self.position + 1) % self.capacity
+        self.size = min(self.size + 1, self.capacity)
+    
+    def sample(self, batch_size):
+        """Sample un batch aléatoire."""
+        indices = np.random.choice(self.size, batch_size, replace=False)
+        
+        # Wind fields: (batch, 32, 32, 2) → (batch, 2, 32, 32) pour PyTorch
+        wind_fields = torch.tensor(
+            self.wind_fields[indices].transpose(0, 3, 1, 2), 
+            device=self.device
+        )
+        next_wind_fields = torch.tensor(
+            self.next_wind_fields[indices].transpose(0, 3, 1, 2),
+            device=self.device
+        )
+        
+        physics = torch.tensor(self.physics[indices], device=self.device)
+        actions = torch.tensor(self.actions[indices], device=self.device)
+        rewards = torch.tensor(self.rewards[indices], device=self.device)
+        next_physics = torch.tensor(self.next_physics[indices], device=self.device)
+        dones = torch.tensor(self.dones[indices], device=self.device)
+        
+        return wind_fields, physics, actions, rewards, next_wind_fields, next_physics, dones
+    
+    def __len__(self):
+        return self.size
+
+
+
 class PrioritizedReplayBuffer:
     """
     Buffer de replay avec priorités pour DQN
@@ -588,7 +649,7 @@ class DQNTrainer:
         target_update_freq=1000,
         use_double_dqn=True,
         use_noisy_net=True,
-        use_per=True,
+        use_per=False,
         per_alpha=0.6,
         per_beta_start=0.4,
         per_beta_frames=120000,
@@ -643,6 +704,7 @@ class DQNTrainer:
             )
         else:
             # Fallback to normal replay buffer if needed
+            self.replay_buffer = ReplayBuffer(buffer_capacity, self.device)
             raise NotImplementedError("Normal replay buffer not implemented in this version")
         
         # Logging
