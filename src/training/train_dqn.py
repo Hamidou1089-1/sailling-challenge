@@ -12,7 +12,7 @@ from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.agents.my_agent_DQN import DQNTrainer
+from src.agents.my_agent_dqn_learning import DQNTrainer
 from src.utils.save_my_dqn import save_dqn_agent
 from wind_scenarios import get_wind_scenario
 from wind_scenarios.env_sailing import SailingEnv

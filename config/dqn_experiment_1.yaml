@@ -3,7 +3,7 @@
 
 # Training parameters
 training:
-  num_episodes: 80000
+  num_episodes: 144000
   max_steps_per_episode: 200
   eval_freq: 100          # Evaluate every N episodes
   save_freq: 5000        # Save checkpoint every N episodes
@@ -20,21 +20,21 @@ training:
 agent:
   # Learning rate
   learning_rate: 0.004   # Conservative 3e-4
-  lr_decay: 0.999998        # Slow decay
-  min_lr: 0.00012         # Floor
+  lr_decay: 0.9999998        # Slow decay
+  min_lr: 0.000082         # Floor
   
   # Exploration (epsilon-greedy)
   epsilon_start: 1.0
-  epsilon_end: 0.0002       # Changed from 0.05 to 0.01 for more exploitation
-  epsilon_decay: 0.999998   # Linear decay over ~14k steps to reach 0.01
+  epsilon_end: 0.000002       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.99999956   # Linear decay over ~14k steps to reach 0.01
   
   # Discount factor
   gamma: 0.99
   
   # Experience replay
-  buffer_capacity: 200000
-  batch_size: 64
-  learning_starts: 500   # Start learning after N steps
+  buffer_capacity: 500000
+  batch_size: 512
+  learning_starts: 1000   # Start learning after N steps
   
   # Target network
   target_update_type: "hard"  # Options: "hard" or "soft"
@@ -43,7 +43,7 @@ agent:
   
   # Network architecture
   use_double_dqn: true        # Enable Double DQN (recommended)
-  gradient_clip: 10.0         # Clip gradients
+  gradient_clip: 5.0         # Clip gradients
   
 # Environment
 environment:

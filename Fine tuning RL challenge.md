@@ -208,93 +208,115 @@ OVERALL
 
 # DQN + CNN + Average pooling
 
+# DQN Baseline Configuration
+# Safe conservative settings for initial training
 
-configuration file (yaml)
-\# DQN Baseline Configuration
-\# Safe conservative settings for initial training
-
-\# Training parameters
+# Training parameters
 training:
-  num_episodes: 6000
+  num_episodes: 80000
   max_steps_per_episode: 200
-  eval_freq: 200          # Evaluate every N episodes
-  save_freq: 200        # Save checkpoint every N episodes
-  log_freq: 10            # Log to TensorBoard every N episodes
+  eval_freq: 100          # Evaluate every N episodes
+  save_freq: 5000        # Save checkpoint every N episodes
+  log_freq: 1000            # Log to TensorBoard every N episodes
   
-  \# Wind scenarios for training
+  # Wind scenarios for training
   train_scenarios: ['training_1', 'training_2', 'training_3']
   eval_scenarios: ['training_1', 'training_2', 'training_3']
   
-  \# Reproducibility
+  # Reproducibility
   seed: 42
 
-\# Agent hyperparameters
+# Agent hyperparameters
 agent:
-  \# Learning rate
-  learning_rate: 0.001   # Conservative 3e-4
-  lr_decay: 0.99998        # Slow decay
-  min_lr: 0.0003         # Floor
+  # Learning rate
+  learning_rate: 0.004   # Conservative 3e-4
+  lr_decay: 0.999998        # Slow decay
+  min_lr: 0.00012         # Floor
   
-  \# Exploration (epsilon-greedy)
+  # Exploration (epsilon-greedy)
   epsilon_start: 1.0
-  epsilon_end: 0.005       # Changed from 0.05 to 0.01 for more exploitation
-  epsilon_decay: 0.9998   # Linear decay over ~14k steps to reach 0.01
+  epsilon_end: 0.0002       # Changed from 0.05 to 0.01 for more exploitation
+  epsilon_decay: 0.999998   # Linear decay over ~14k steps to reach 0.01
   
-  \# Discount factor
+  # Discount factor
   gamma: 0.99
   
-  \# Experience replay
-  buffer_capacity: 100000
+  # Experience replay
+  buffer_capacity: 200000
   batch_size: 64
-  learning_starts: 200   # Start learning after N steps
+  learning_starts: 500   # Start learning after N steps
   
-  \# Target network
+  # Target network
   target_update_type: "hard"  # Options: "hard" or "soft"
-  target_update_freq: 500    # For hard update (every N steps)
+  target_update_freq: 5000    # For hard update (every N steps)
   tau: 0.005                  # For soft update (not used if hard)
   
-  \# Network architecture
+  # Network architecture
   use_double_dqn: true        # Enable Double DQN (recommended)
   gradient_clip: 10.0         # Clip gradients
   
-\# Environment
+# Environment
 environment:
   goal: [16, 31]
   grid_size: [32, 32]
 
-\# Normalization stats
-normalization:
-  stats_path: "data/normalization_stats.pkl"
-  collect_n_episodes: 1500    # Episodes to collect stats
 
-\# Checkpointing
+# Checkpointing
 checkpoint:
   save_dir: "checkpoints/dqn"
   resume_from: null           # Path to checkpoint to resume from
 
-\# Logging
+# Logging
 logging:
   tensorboard_dir: "runs/dqn"
   experiment_name: "dqn_baseline"
   log_gradients: false        # Log gradient histograms (expensive)
 
-
 resultat:
 
+Best Agent on codabench.
 
-sailling-challenge git:main*  196s
-(.venv) ❯ python3 wind_scenarios/evaluate_submission.py src/submission/my_agent_dqn_dqn_baseline.py --seeds 1 --num-seeds 150
-Loaded agent: MyAgentDQN
+Reports structure : 
+- Lets define the environnement, the number of possible states.
+- Why the challenge isn't trivial
+- what kind of different approach we can have to compete for a better score
+- What is my approach, physics shaping, reward shapping, why i didn't choose n step, ucb approach, balance between complexity and compute power
+- Where did I fail
+- Why did I choose DQN
+- Noisy + PER
+- My next step
+- If more compute power (which I had access to) what will be the next step
+- Parameters to reproduce my results
 
-Evaluating on 3 wind scenarios with 150 seeds
-Agent: MyAgentDQN
-Maximum steps per episode: 1000
+The number of possible states of the environnement is infinite (because of the continuous variables).
+the number of possible action is 9, for all the direction in space discritize (because we can have for the same environnement, a continuous (angle) action space).
 
-| WIND_SCENARIO    | SUCCESS RATE | MEAN REWARD       | MEAN STEPS |
-| ------------ | ------------ | ------------ | ------------ |
-| training_1   | Success: 100.00% | Reward: 60.98 ± 5.27 | Steps: 50.6 ± 8.9 |
-| training_2   | Success: 100.00% | Reward: 76.51 ± 1.20 | Steps: 27.7 ± 1.6 |
-| training_3   | Success: 100.00% | Reward: 61.85 ± 5.64 | Steps: 49.3 ± 10.0 |
-OVERALL      | Success: 100.00% ± 0.00%
-Reward: 66.45 ± 7.12
-Steps: 42.5 ± 10.5
+One possible answer for the non triviality of the challenge is the number of possible states is infinite, so it's computational impossible to compute a q table
+that can helps us decide for the action we take for the sailling.
+And one other answer is that even if we discritize (will be define afterward), we have to make a trade off between number of bins to discritize the continuous 
+variable and not making the q table to big or else it will also be computationnal challenging.
+
+Ok so in RL, we have some algorithme which have more potential to succeed for certain task:
+- We have two cases possible :
+  - We discretize the observation, in that case we can apply 
+Here we have a continous space, if don't discretize it, the classical q learning algorithme is disqualified.
+But algorithme with ucb did well on the training data 50 on average reward and 71 in steps, but on the hidden test data, i did very poorly, 2.29 without ucb,
+and 9 with ucb, that wasn't the fault of the algorithme itself, my training strategie was quite bad, training without any validation step to finitune is useless in ml in general.
+so i did some measurement during my fine tune phase, which was essently tuning the reward and the physics feature.
+My goal was to help my agent with good information, and good feedback, because in this environnement, we can with infinite compute power we can make an almost 
+perfect planning for the agent (rule based approach), but the rl way is try and fail and learn if possible.
+so the trade off was to give him enough dopamine for going fast and for getting closer, but we don't want him to be a junky, so the reward he gets from the immadiate feedback shouldn't replace the final reward and the number of step, so the goal of my finetuning was to handle that.
+at some point i named the coefficient for the speed of the boat mu, and prog for the progression made, and took -1 at each step to keep the agent for not mooving when everything in the environnement is against him (wind speed etc).
+and thus my implementation of dqn came from my faillure to tune well enough my classical algorithm, but to be honnest i didn't fully commit to it because from the start i knew that they were limited because of the discretize approach which made the information given to the agent a very poor version of the real state of the 
+environnement.
+So i went to geeks for geeks, and medium to see different algorithme for continuous states, what are there advantages etc, and dqn was the simplest and maybe 
+the most efficient to implement for a first try.
+and it didn't dissapoint, for my first complete trained model, I beat the rule based model on codabench and took the first place.
+the architecture of the model evolved so my first submissions isn't my first dqn model, the first one didn't had cnn and average pooling to it.
+I decide to add a cnn with average pooling because of the information approach and efficiency, first we capture the whole map, and then we reduce until we only see the local information, the goal for this construction was to help for better planning, and i hoped that the model could predict the wind 6 position or more can influence in maybe 3 steps my decision to maximize my speed toward the goal.
+and then the rest of the architecture was prety classique, it was the implementation from medium that i was following.
+I also wanted to have a better exploration strategy as in classical q learning with ucb, but turnout in dqn it's quite difficult, because i choosed noisy net for 
+the natural exploration approach by only adding stochasticity to the weigh of the model, it did better than the rule based model, but less than my classical dqn model, and i even added PER, prioritized experience replay, which was suppose to help me choose with some priority which episode to replay, but turnout when doing a lot of episode, and with my randomisation environnement approach, it just give to much importance to outliers in my buffer, but still being ok, not improving.
+my next step was to implement PPO, because i notice that there is some lack of robustness to my off policy approach, and also because i wanted to try to see 
+how it will behave, it simple to implement, and not more difficult to fine tune than dqn, so there it is.
+

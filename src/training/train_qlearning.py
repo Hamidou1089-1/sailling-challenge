@@ -21,6 +21,71 @@ def parse_args():
     parser.add_argument('--config', type=str, required=True)
     return parser.parse_args()
 
+
+
+
+def generate_curriculum_params(progress):
+    """
+    Générateur d'environnement robuste pour généralisation.
+    
+    Args:
+        progress (float): 0.0 (Début) -> 1.0 (Fin)
+    """
+    
+    # --- 1. DIRECTION : Toujours Aléatoire 360° ---
+    # C'est CRUCIAL. L'agent doit comprendre que le vent peut venir de n'importe où,
+    # même à l'épisode 1. La facilité vient de la stabilité, pas de la direction.
+    theta = np.random.uniform(0, 2 * np.pi)
+    wind_dir = (np.cos(theta), np.sin(theta))
+    
+    # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
+    # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
+    # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
+    if np.random.random() < 0.3:
+        difficulty = 0.0  # Mode "Repos / Fondamentaux"
+    else:
+        # La difficulté suit la progression. 
+        # On ajoute un petit bruit pour ne pas être trop linéaire.
+        difficulty = np.clip(progress + np.random.uniform(-0.1, 0.1), 0.0, 1.0)
+
+    # --- 3. PARAMÈTRES DU VENT ---
+    
+    # Vitesse : 3.0 est la vitesse standard. 
+    # Plus c'est dur, plus on s'éloigne de cette norme (vent très faible ou tempête).
+    # difficulty 0 -> speed 3.0
+    # difficulty 1 -> speed entre 1.0 et 5.0
+    #speed_noise = np.random.uniform(-.01, .01) * difficulty
+    base_speed = 3.0 
+    
+    wind_init_params = {
+        'base_speed': base_speed,
+        'base_direction': wind_dir,
+        
+        # Echelle : 128 (Large/Facile) -> 16 (Haché/Dur)
+        'pattern_scale': np.clip(128 - int(122 * difficulty), 32, 128), 
+        
+        # Force des turbulences
+        'pattern_strength': 0.2 + (0.5 * difficulty),
+        'strength_variation': 0.15 + (0.5 * difficulty),
+        'noise': 0.085 + (0.05 * difficulty)
+    }
+    
+    # --- 4. EVOLUTION DYNAMIQUE ---
+    wind_evol_params = {
+        # Probabilité de changement : De 0% (Stable) à 90% (Chaos)
+        'wind_change_prob': np.clip(0.15 + (0.75 * difficulty), 0, 1) * (difficulty > 0),
+        'pattern_scale': 128,
+        'perturbation_angle_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, 1)*(difficulty > 0),
+        'perturbation_strength_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, 1) *(difficulty > 0),
+        
+        
+        'rotation_bias': np.random.uniform(-0.045, 0.045) * difficulty,
+        'bias_strength': np.clip(difficulty + 0.15, 0, 1.0) * (difficulty > 0)
+    }
+    
+    return wind_init_params, wind_evol_params
+
+
 def train_qlearning(config):
     """Training loop for Q-Learning with UCB."""
     num_episodes = config['training']['num_episodes']
@@ -57,8 +122,14 @@ def train_qlearning(config):
     
     for episode in range(num_episodes):
         # Random scenario
-        scenario = np.random.choice(train_scenarios)
-        env = SailingEnv(**get_wind_scenario(scenario))
+        #scenario = np.random.choice(train_scenarios)
+        progress = episode / num_episodes
+        init_params, evol_params = generate_curriculum_params(progress)
+                    
+            
+
+        env = SailingEnv(wind_init_params=init_params, wind_evol_params=evol_params)
+        #env = SailingEnv(**get_wind_scenario(scenario))
         
         observation, info = env.reset(seed=episode)
         state = agent.discretize_state(observation)
