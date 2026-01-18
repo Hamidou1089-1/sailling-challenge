@@ -590,7 +590,7 @@ class DQNTrainer:
         velocity_reward = 2 * (velocity - velocity_prev) 
         
         # Malus de step
-        step_penalty = -0.05*step
+        step_penalty = -0.5
         
         # Shaped reward
         shaped_reward = raw_reward + progress_reward + velocity_reward + step_penalty

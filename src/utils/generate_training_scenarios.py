@@ -217,19 +217,19 @@ class ScenarioInterpolationCurriculum:
         self.stages = [
             {
                 'name': 'Static Training',
-                'episodes': (0, 24000),
+                'episodes': (0, 15000),
                 'strategy': 'mostly_static',
                 'recall_prob': 0.5,  # 50% de pure static
             },
             {
                 'name': 'Gentle Dynamics',
-                'episodes': (24000, 48000),
+                'episodes': (15000, 30000),
                 'strategy': 'static_to_dynamic',
                 'recall_prob': 0.3,
             },
             {
                 'name': 'Full Scenarios',
-                'episodes': (48000, 72000),
+                'episodes': (30000, 72000),
                 'strategy': 'balanced_scenarios',
                 'recall_prob': 0.2,
             },
