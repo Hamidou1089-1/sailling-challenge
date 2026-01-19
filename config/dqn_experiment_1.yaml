@@ -3,7 +3,7 @@
 
 # Training parameters
 training:
-  num_episodes: 144000
+  num_episodes: 120000
   max_steps_per_episode: 200
   eval_freq: 100          # Evaluate every N episodes
   save_freq: 5000        # Save checkpoint every N episodes
@@ -26,14 +26,14 @@ agent:
   # Exploration (epsilon-greedy)
   epsilon_start: 1.0
   epsilon_end: 0.000002       # Changed from 0.05 to 0.01 for more exploitation
-  epsilon_decay: 0.99999956   # Linear decay over ~14k steps to reach 0.01
+  epsilon_decay: 0.99999896   # Linear decay over ~14k steps to reach 0.01
   
   # Discount factor
   gamma: 0.99
   
   # Experience replay
   buffer_capacity: 500000
-  batch_size: 512
+  batch_size: 256
   learning_starts: 1000   # Start learning after N steps
   
   # Target network

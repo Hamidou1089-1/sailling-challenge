@@ -12,7 +12,7 @@ from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.agents.my_agent_dqn_learning import DQNTrainer
+from src.agents.my_agent_DQN import DQNTrainer
 from src.utils.save_my_dqn import save_dqn_agent
 from wind_scenarios import get_wind_scenario
 from wind_scenarios.env_sailing import SailingEnv
@@ -98,7 +98,7 @@ def main():
     trainer.save_model(str(final_path))
     
     exp_name = config['logging']['experiment_name']
-    output_path = f"src/submission/my_agent_new_train_{exp_name}.py"
+    output_path = f"src/submission/my_agent_new_dqn_{exp_name}.py"
     save_dqn_agent(trainer, output_path)
     
     print(f"\n✅ Training complete!")

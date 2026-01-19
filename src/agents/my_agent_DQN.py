@@ -568,6 +568,7 @@ class DQNTrainer:
         """
         x, y = next_obs[0], next_obs[1]
         vx, vy = next_obs[2], next_obs[3]
+        vx_prev, vy_prev = obs[2], obs[3]
         
         # Distance au goal
         goal_vec = np.array(self.goal) - np.array([x, y])
@@ -584,13 +585,14 @@ class DQNTrainer:
         
         # Velocity reward
         velocity = np.linalg.norm([vx, vy])
-        velocity_reward = 0.9 * velocity
+        velocity_prev = np.linalg.norm([vx_prev, vy_prev])
+        velocity_reward = 2 * (velocity - velocity_prev) 
         
         # Malus de step
         step_penalty = -1.5
         
         # Shaped reward
-        shaped_reward = raw_reward + progress_reward + velocity_reward + step_penalty
+        shaped_reward = raw_reward + progress_reward + velocity_reward + step_penalty + 0.9*velocity
         
         # Reset prev_distance si épisode terminé
         if done:
