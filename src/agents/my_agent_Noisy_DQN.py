@@ -114,7 +114,7 @@ def generate_curriculum_params(progress):
     else:
         # La difficulté suit la progression. 
         # On ajoute un petit bruit pour ne pas être trop linéaire.
-        difficulty = np.clip(progress + np.random.uniform(-0.2, 0.2), 0.0, 1.0)
+        difficulty = np.clip(progress + np.random.uniform(-0.3, 0.6), 0.0, 1.0)
 
     # --- 3. PARAMÈTRES DU VENT ---
     
@@ -123,7 +123,7 @@ def generate_curriculum_params(progress):
     # difficulty 0 -> speed 3.0
     # difficulty 1 -> speed entre 1.0 et 5.0
     speed_noise = np.random.uniform(-.5, .5) * difficulty
-    base_speed = 3.0 + speed_noise
+    base_speed = 3.0 # + speed_noise
     
     wind_init_params = {
         'base_speed': base_speed,
@@ -174,8 +174,8 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     
     # Constantes physiques (Hardcodées larges pour être sûr)
     MAX_DIST = 50.0  # Diagonale de la map
-    MAX_SPEED = 6.0  # Vitesse max raisonnable du bateau
-    MAX_WIND = 6.0   # Vitesse max du vent
+    MAX_SPEED = 7.0  # Vitesse max raisonnable du bateau
+    MAX_WIND = 7.0   # Vitesse max du vent
     
     # --- A. POSITION RELATIVE (Vecteur vers le but) ---
     dx = goal[0] - x
@@ -195,7 +195,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     # --- B. VITESSE BATEAU ---
     speed = np.sqrt(vx**2 + vy**2)
     # Direction du bateau (si vitesse nulle, on prend 0,0)
-    if speed > 0.01:
+    if speed > 0.001:
         dir_boat_x = vx / speed
         dir_boat_y = vy / speed
     else:
@@ -204,7 +204,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
         dir_boat_x, dir_boat_y = 0, 0
 
     # Feature 2: Vitesse normalisée (0 à 1)
-    feat_speed = np.clip(speed / MAX_SPEED, 0, 1)
+    feat_speed = speed / MAX_SPEED
     
     # --- C. VENT ---
     wind_speed = np.sqrt(wx**2 + wy**2)
@@ -215,7 +215,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
         dir_wind_x, dir_wind_y = 0, 0
         
     # Feature 3: Force du vent (0 à 1)
-    feat_wind_str = np.clip(wind_speed / MAX_WIND, 0, 1)
+    feat_wind_str = wind_speed / MAX_WIND
     
     # --- D. RELATIONS (Dot Products - Les features "intelligentes") ---
     
@@ -458,7 +458,7 @@ class PrioritizedReplayBuffer:
         self.alpha = alpha
         self.beta = beta_start
         self.beta_increment = (1.0 - beta_start) / beta_frames
-        self.epsilon = 0.09  # Petit constant pour éviter priorité = 0
+        self.epsilon = 0.01  # Petit constant pour éviter priorité = 0
         self.abs_err_upper = 1.0  # Clip l'erreur TD
         self.frame = 1
         self.device = device

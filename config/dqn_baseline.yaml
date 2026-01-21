@@ -3,13 +3,13 @@
 
 agent:
   # Learning
-  learning_rate: 0.009
-  lr_decay: 0.99999  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
+  learning_rate: 0.003
+  lr_decay: 0.999996  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
   gamma: 0.99
   
   # Buffer
-  buffer_capacity: 400000
-  batch_size: 128
+  buffer_capacity: 600000
+  batch_size: 256
   
   # Target network
   target_update_freq: 1000  # Plus fréquent avec PER (toutes les 500 steps)
@@ -17,15 +17,15 @@ agent:
   # Algorithme
   use_double_dqn: true
   use_noisy_net: true  # Remplace epsilon-greedy
-  use_per: false        # Prioritized Experience Replay
+  use_per: true        # Prioritized Experience Replay
   
   # PER parameters
-  per_alpha: 0.2           # Niveau de priorisation (0=uniforme, 1=full priorité)
-  per_beta_start: 0.2      # Correction initiale du biais
-  per_beta_frames: 10000  # ~12k episodes * 10 steps/episode moyenne
+  per_alpha: 0.6           # Niveau de priorisation (0=uniforme, 1=full priorité)
+  per_beta_start: 0.4      # Correction initiale du biais
+  per_beta_frames: 12000  # ~12k episodes * 10 steps/episode moyenne
 
 training:
-  num_episodes: 144000
+  num_episodes: 14000
   eval_freq: 1000    # Évalue tous les 100 épisodes
   save_freq: 1000   # Sauvegarde tous les 1000 épisodes
   
@@ -37,5 +37,5 @@ checkpoint:
   save_dir: checkpoints/dqn
 
 logging:
-  experiment_name: noisynet_per_12k
+  experiment_name: noisynet_per_14k
   tensorboard: true
