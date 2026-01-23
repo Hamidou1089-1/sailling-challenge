@@ -4,12 +4,12 @@
 agent:
   # Learning
   learning_rate: 0.003
-  lr_decay: 0.999965
+  lr_decay: 0.9999985
   gamma: 0.99
   
   # Buffer
-  buffer_capacity: 600000
-  batch_size: 128
+  buffer_capacity: 10000
+  batch_size: 256
   
   # Target network
   target_update_freq: 1000
@@ -20,22 +20,22 @@ agent:
   use_per: true
   
   # PER parameters
-  per_alpha: 0.6
-  per_beta_start: 0.4
-  per_beta_frames: 150000
+  per_alpha: 0.4
+  per_beta_start: 0.2
+  per_beta_frames: 12000
   
   # Attention architecture
   d_model: 64          # Dimension des embeddings
   n_heads: 4           # Nombre de têtes d'attention
   n_layers: 2          # Nombre de couches transformer
   n_queries: 4         # Nombre de queries (aspects de la décision)
-  patch_size: 4        # Taille des patches (4×4 → 64 patches)
-  dropout: 0.1         # Dropout dans FFN
+  patch_size: 8        # Taille des patches (4×4 → 64 patches)
+  dropout: 0.15         # Dropout dans FFN
 
 training:
-  num_episodes: 15000
-  eval_freq: 500
-  save_freq: 1000
+  num_episodes: 10000
+  eval_freq: 50
+  save_freq: 100
   
   train_scenarios:
     - training_1

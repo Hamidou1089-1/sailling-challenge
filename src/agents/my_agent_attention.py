@@ -52,11 +52,8 @@ def generate_curriculum_params(progress):
     # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
     # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
     # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
-    if np.random.random() < 0.4:
-        wind_scen = get_wind_scenario(np.random.choice(wind_scen_names))
-        wind_init_params = wind_scen['wind_init_params']
-        wind_evol_params = wind_scen['wind_evol_params']
-        return wind_init_params, wind_evol_params
+    if np.random.random() < 0.3:
+        difficulty = 0.03
     else:
        
         # On ajoute un petit bruit pour ne pas être trop linéaire.
@@ -965,7 +962,7 @@ class DQNTrainer:
             obs = next_obs
             self.steps += 1
             
-            if self.steps % 4 == 0:
+            if self.steps % 1 == 0:
                 self.train_step()
             
             if done or truncated:
