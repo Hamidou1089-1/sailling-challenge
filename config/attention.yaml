@@ -1,0 +1,48 @@
+# Configuration pour Attention DQN (ViT-style)
+# Architecture: Wind Patches → Cross-Attention → Dueling Head
+
+agent:
+  # Learning
+  learning_rate: 0.003
+  lr_decay: 0.999965
+  gamma: 0.99
+  
+  # Buffer
+  buffer_capacity: 600000
+  batch_size: 128
+  
+  # Target network
+  target_update_freq: 1000
+  
+  # Algorithm
+  use_double_dqn: true
+  use_noisy_net: true
+  use_per: true
+  
+  # PER parameters
+  per_alpha: 0.6
+  per_beta_start: 0.4
+  per_beta_frames: 150000
+  
+  # Attention architecture
+  d_model: 64          # Dimension des embeddings
+  n_heads: 4           # Nombre de têtes d'attention
+  n_layers: 2          # Nombre de couches transformer
+  n_queries: 4         # Nombre de queries (aspects de la décision)
+  patch_size: 4        # Taille des patches (4×4 → 64 patches)
+  dropout: 0.1         # Dropout dans FFN
+
+training:
+  num_episodes: 15000
+  eval_freq: 500
+  save_freq: 1000
+  
+  train_scenarios:
+    - training_1
+
+checkpoint:
+  save_dir: checkpoints/attention
+
+logging:
+  experiment_name: attention_vit_15k
+  tensorboard: true

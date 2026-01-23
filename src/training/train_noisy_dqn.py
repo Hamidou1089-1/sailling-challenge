@@ -106,7 +106,7 @@ def main():
     trainer.save_model(str(final_path))
     
     exp_name = config['logging']['experiment_name']
-    output_path = f"src/submission/my_agent_noisy_{exp_name}.py"
+    output_path = f"src/submission/my_agent_{exp_name}.py"
     save_dqn_agent(trainer, output_path)
     
     print(f"\n✅ Training complete!")

@@ -105,16 +105,19 @@ def generate_curriculum_params(progress):
     # même à l'épisode 1. La facilité vient de la stabilité, pas de la direction.
     theta = np.random.uniform(0, 2 * np.pi)
     wind_dir = (np.cos(theta), np.sin(theta))
-    
+    wind_scen_names = ['static_headwind', 'training_1', 'training_3', 'simple_static']
     # --- 2. GESTION DE LA DIFFICULTÉ (Le "Recall") ---
     # On garde 20-30% d'épisodes "Faciles" (Vent stable) tout le temps.
     # Cela sert d'ancrage pour que l'agent n'oublie pas les bases.
-    if np.random.random() < 0.3:
-        difficulty = 0.0  # Mode "Repos / Fondamentaux"
+    if np.random.random() < 0.4:
+        wind_scen = get_wind_scenario(np.random.choice(wind_scen_names))
+        wind_init_params = wind_scen['wind_init_params']
+        wind_evol_params = wind_scen['wind_evol_params']
+        return wind_init_params, wind_evol_params
     else:
-        # La difficulté suit la progression. 
+       
         # On ajoute un petit bruit pour ne pas être trop linéaire.
-        difficulty = np.clip(progress + np.random.uniform(-0.3, 0.6), 0.0, 1.0)
+        difficulty = 0.5 + np.random.uniform(-0.4, 0.45)
 
     # --- 3. PARAMÈTRES DU VENT ---
     
@@ -122,33 +125,32 @@ def generate_curriculum_params(progress):
     # Plus c'est dur, plus on s'éloigne de cette norme (vent très faible ou tempête).
     # difficulty 0 -> speed 3.0
     # difficulty 1 -> speed entre 1.0 et 5.0
-    speed_noise = np.random.uniform(-.5, .5) * difficulty
-    base_speed = 3.0 # + speed_noise
+    base_speed = 3.0 + np.random.uniform(-0.01, 0.01)
     
     wind_init_params = {
         'base_speed': base_speed,
         'base_direction': wind_dir,
         
         # Echelle : 128 (Large/Facile) -> 16 (Haché/Dur)
-        'pattern_scale': np.clip(128 - int(122 * difficulty), 32, 128), 
+        'pattern_scale': np.random.choice([32, 32, 64, 128, 128]), 
         
         # Force des turbulences
-        'pattern_strength': 0.2 + (0.5 * difficulty),
-        'strength_variation': 0.15 + (0.5 * difficulty),
-        'noise': 0.085 + (0.05 * difficulty)
+        'pattern_strength': np.clip(0.08 + (0.75 * difficulty), 0.1, 0.62),
+        'strength_variation': np.clip(0.08 + (0.5 * difficulty), 0.1, 0.42),
+        'noise': np.clip(0.08 + (0.15 * difficulty), 0, 0.11)
     }
     
     # --- 4. EVOLUTION DYNAMIQUE ---
     wind_evol_params = {
         # Probabilité de changement : De 0% (Stable) à 90% (Chaos)
-        'wind_change_prob': np.clip(0.15 + (0.75 * difficulty), 0, 1) * (difficulty > 0),
+        'wind_change_prob': 1.0,
         'pattern_scale': 128,
-        'perturbation_angle_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, 1)*(difficulty > 0),
-        'perturbation_strength_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, 1) *(difficulty > 0),
+        'perturbation_angle_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, .12)*(difficulty > 0),
+        'perturbation_strength_amplitude': np.clip(0.085 + (0.15 * difficulty), 0, .12) *(difficulty > 0),
         
         
-        'rotation_bias': np.random.uniform(-0.045, 0.045) * difficulty,
-        'bias_strength': np.clip(difficulty + 0.15, 0, 1.0) * (difficulty > 0)
+        'rotation_bias': 0.01 + np.random.uniform(-0.045, 0.045) * difficulty,
+        'bias_strength': np.clip(difficulty + 0.75, 0, 1.0) 
     }
     
     return wind_init_params, wind_evol_params
@@ -173,9 +175,9 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     wx, wy = obs[4], obs[5] # Vent local
     
     # Constantes physiques (Hardcodées larges pour être sûr)
-    MAX_DIST = 50.0  # Diagonale de la map
-    MAX_SPEED = 7.0  # Vitesse max raisonnable du bateau
-    MAX_WIND = 7.0   # Vitesse max du vent
+    MAX_DIST = 45.0  # Diagonale de la map
+    MAX_SPEED = 5.0  # Vitesse max raisonnable du bateau
+    MAX_WIND = 5.0   # Vitesse max du vent
     
     # --- A. POSITION RELATIVE (Vecteur vers le but) ---
     dx = goal[0] - x
@@ -190,7 +192,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
         dir_goal_x, dir_goal_y = 0, 0
         
     # Feature 1: Distance normalisée (0 à 1)
-    feat_dist = np.clip(dist / MAX_DIST, 0, 1)
+    feat_dist = dist / MAX_DIST
     
     # --- B. VITESSE BATEAU ---
     speed = np.sqrt(vx**2 + vy**2)

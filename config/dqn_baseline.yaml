@@ -4,7 +4,7 @@
 agent:
   # Learning
   learning_rate: 0.003
-  lr_decay: 0.999996  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
+  lr_decay: 0.999965  # Decay lent pour 12k épisodes (exp(-0.00005) par step)
   gamma: 0.99
   
   # Buffer

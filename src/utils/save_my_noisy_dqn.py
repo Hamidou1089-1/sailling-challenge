@@ -115,9 +115,9 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     wx, wy = obs[4], obs[5]  # Local wind
     
     # Physical constants
-    MAX_DIST = 50.0
-    MAX_SPEED = 7.0
-    MAX_WIND = 7.0
+    MAX_DIST = 45.0
+    MAX_SPEED = 5.0
+    MAX_WIND = 5.0
     
     # Position relative to goal
     dx = goal[0] - x
@@ -130,17 +130,17 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     else:
         dir_goal_x, dir_goal_y = 0.0, 0.0
     
-    feat_dist = np.clip(dist / MAX_DIST, 0, 1)
+    feat_dist = dist / MAX_DIST
     
     # Boat velocity
     speed = np.sqrt(vx**2 + vy**2)
-    if speed > 0.01:
+    if speed > 0.001:
         dir_boat_x = vx / speed
         dir_boat_y = vy / speed
     else:
         dir_boat_x, dir_boat_y = 0.0, 0.0
     
-    feat_speed = np.clip(speed / MAX_SPEED, 0, 1)
+    feat_speed = speed / MAX_SPEED
     
     # Wind
     wind_speed = np.sqrt(wx**2 + wy**2)
@@ -150,7 +150,7 @@ def compute_physics_features(obs: np.ndarray, goal: Tuple[int, int]) -> np.ndarr
     else:
         dir_wind_x, dir_wind_y = 0.0, 0.0
     
-    feat_wind_str = np.clip(wind_speed / MAX_WIND, 0, 1)
+    feat_wind_str = wind_speed / MAX_WIND
     
     # Dot products (alignments)
     feat_align_goal = dir_boat_x * dir_goal_x + dir_boat_y * dir_goal_y
@@ -365,14 +365,8 @@ def load_weights():
     
     # Classe de l'agent
     file_content += f'''
-class {agent_class_name}(BaseAgent):
-    """
-    Standalone DQN agent with NoisyNet for Codabench submission.
+class MyAgent(BaseAgent):
     
-    ⚡ FAST VERSION: No base64/pickle decoding, instant loading.
-    This agent requires NO external dependencies beyond NumPy and standard library.
-    All network weights (mu parameters only) are embedded directly in the code.
-    """
     
     def __init__(self):
         super().__init__()
