@@ -1,48 +1,54 @@
-# Configuration pour Attention DQN (ViT-style)
+# Configuration pour Attention DQN (ViT-style) - NO REPLAY BUFFER
 # Architecture: Wind Patches → Cross-Attention → Dueling Head
+# Training: Collecte épisode complet → Entraîne 4 fois dessus → Nouvelle config de vent
 
 agent:
   # Learning
-  learning_rate: 0.003
-  lr_decay: 0.9999985
+  learning_rate: 0.0006
+  lr_decay: 0.9999998
   gamma: 0.99
   
-  # Buffer
-  buffer_capacity: 10000
-  batch_size: 256
+  # Training strategy (NO REPLAY BUFFER)
+  batch_size: 64              # Taille des batches lors de l'entraînement sur épisode
+  n_epoch_per_episode: 4       # Nombre de passes sur chaque épisode collecté
   
   # Target network
-  target_update_freq: 1000
+  target_update_freq: 2000
   
   # Algorithm
   use_double_dqn: true
   use_noisy_net: true
-  use_per: true
-  
-  # PER parameters
-  per_alpha: 0.4
-  per_beta_start: 0.2
-  per_beta_frames: 12000
   
   # Attention architecture
   d_model: 64          # Dimension des embeddings
   n_heads: 4           # Nombre de têtes d'attention
   n_layers: 2          # Nombre de couches transformer
   n_queries: 4         # Nombre de queries (aspects de la décision)
-  patch_size: 8        # Taille des patches (4×4 → 64 patches)
-  dropout: 0.15         # Dropout dans FFN
+  patch_size: 4        # Taille des patches (8×8 → 16 patches, ou 4×4 → 64 patches)
+  dropout: 0.1        # Dropout dans FFN
 
 training:
-  num_episodes: 10000
-  eval_freq: 50
-  save_freq: 100
+  num_episodes: 200000
+  eval_freq: 500
+  save_freq: 5000
   
   train_scenarios:
     - training_1
 
 checkpoint:
-  save_dir: checkpoints/attention
+  save_dir: checkpoints/attention_no_replay
 
 logging:
-  experiment_name: attention_vit_15k
+  experiment_name: attention_no_replay_15k
   tensorboard: true
+
+# Notes sur la stratégie d'entraînement:
+# ========================================
+# - PAS DE REPLAY BUFFER: Chaque épisode est unique (curriculum learning)
+# - Collecte: L'agent joue un épisode complet dans un environnement de vent spécifique
+# - Training: On entraîne 4 fois sur cet épisode (en shufflant les transitions)
+# - Avantages:
+#   * Chaque configuration de vent est bien apprise
+#   * Cohérence temporelle préservée durant la collecte
+#   * Architecture Transformer utilisée optimalement
+#   * Pas de "vieilles données" dans un buffer global
